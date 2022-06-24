@@ -1,0 +1,1 @@
+install_subdir('guppiraw', install_dir : get_option('includedir'))

@@ -1,0 +1,3 @@
+[submodule "subprojects/fitsheaderc99"]
+	path = subprojects/fitsheaderc99
+	url = https://github.com/MydonSolutions/fitsheaderc99
