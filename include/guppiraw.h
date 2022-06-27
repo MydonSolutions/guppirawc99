@@ -50,15 +50,18 @@ typedef struct {
   uint32_t n_pol;
   uint32_t n_bit;
   uint32_t n_ant;
+
+  off_t file_header_pos;
+  off_t file_data_pos;
 } guppiraw_header_t;
 
-int guppiraw_read_header(int* fd, guppiraw_header_t* gr_header) {
-  // off_t header_start = lseek(fd, 0, SEEK_CUR);
+int guppiraw_read_header(int fd, guppiraw_header_t* gr_header) {
+  gr_header->file_header_pos = lseek(fd, 0, SEEK_CUR);
 
   size_t header_entry_count = 0;
   char entry[81];
   while(header_entry_count < GUPPI_RAW_HEADER_MAX_ENTRIES) {
-    read(*fd,entry, 80);
+    read(fd,entry, 80);
     if(strncmp(entry, GUPPI_RAW_HEADER_END_STR, 80) == 0) {
       break;
     }
@@ -92,6 +95,11 @@ int guppiraw_read_header(int* fd, guppiraw_header_t* gr_header) {
   if(header_entry_count == GUPPI_RAW_HEADER_MAX_ENTRIES) {
     fprintf(stderr, "GuppiRaw: header END not found within %ld entries.", header_entry_count);
     return 1;
+  }
+
+  gr_header->file_data_pos = lseek(fd, 0, SEEK_CUR);
+  if(gr_header->directio == 1) {
+    gr_header->file_data_pos = (gr_header->file_data_pos + 511) & ~((off_t)511);
   }
 
   return 0;

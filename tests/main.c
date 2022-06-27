@@ -3,16 +3,19 @@
 #include <stdint.h>
 #include "guppiraw.h"
 
-int main(){
-  char key[9] = "STRING  ";
-  uint64_t number = 0;
-  for(int i = 0; i < 8; i++){
-    number += ((uint64_t)key[i]) << (i*8);
+int main(int argc, char const *argv[])
+{
+  if (argc > 1){
+    guppiraw_header_t raw_header = {0};
+    int raw_fd = open(argv[1], O_RDONLY);
+    guppiraw_read_header(raw_fd, &raw_header);
+    printf("block_size: %lu\n", raw_header.block_size);
+    printf("directio: %d\n", raw_header.directio);
+    printf("n_obschan: %u\n", raw_header.n_obschan);
+    printf("n_pol: %u\n", raw_header.n_pol);
+    printf("n_bit: %u\n", raw_header.n_bit);
+    printf("n_ant: %u\n", raw_header.n_ant);
   }
-
-  printf("ref: %lu\n", ((uint64_t*)key)[0]);
-  printf("cal: %lu\n", number);
-  printf("def: %lu\n", KEY_UINT64_ID_LE(key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7]));
-  printf("def: %lu\n", KEY_UINT64_ID_BE(key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7]));
+  
   return 0;
 }
