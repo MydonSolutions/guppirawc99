@@ -16,7 +16,7 @@ int main(int argc, char const *argv[])
       printf("\tn_obschan: %u\n", gr_blockinfo.n_obschan);
       printf("\tn_pol: %u\n", gr_blockinfo.n_pol);
       printf("\tn_bit: %u\n", gr_blockinfo.n_bit);
-      printf("\tn_ant: %u\n", gr_blockinfo.n_ant);
+      printf("\tn_time: %lu\n", gr_blockinfo.n_time);
       block_id ++;
       guppiraw_seek_next_block(raw_fd, &gr_blockinfo);
     }

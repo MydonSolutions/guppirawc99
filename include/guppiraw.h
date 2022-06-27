@@ -44,16 +44,28 @@
   KEY_UINT64_ID_LE(key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7])
 
 typedef struct {
+  // Header populated fields
   uint64_t block_size;
   int directio;
   uint32_t n_obschan;
   uint32_t n_pol;
   uint32_t n_bit;
-  uint32_t n_ant;
 
+  // Header inferred fields
+  size_t n_time;
+  size_t bytesize_complexsample;
+  size_t bytestride_polarization;
+  size_t bytestride_time;
+  size_t bytestride_frequency;
+
+  // File position fields
   off_t file_header_pos;
   off_t file_data_pos;
 } guppiraw_block_info_t;
+
+static inline off_t directio_align_value(off_t value) {
+  return (value + 511) & ~((off_t)511);
+}
 
 /*
  * 
@@ -96,9 +108,6 @@ int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
         case KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' '):
           hgetu4(entry, "NBITS", &gr_blockinfo->n_bit);
           break;
-        case KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' '):
-          hgetu4(entry, "NANTS", &gr_blockinfo->n_ant);
-          break;
         default:
           break;
       }
@@ -109,21 +118,35 @@ int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
     fprintf(stderr, "GuppiRaw: header END not found within %ld entries.", header_entry_count);
     return 1;
   }
+  
+  gr_blockinfo->bytesize_complexsample = (2*gr_blockinfo->n_bit)/8;
+  gr_blockinfo->n_time = gr_blockinfo->block_size / (
+    gr_blockinfo->n_obschan * gr_blockinfo->n_pol * gr_blockinfo->bytesize_complexsample
+  );
+
+  gr_blockinfo->bytestride_polarization = gr_blockinfo->bytesize_complexsample;
+  gr_blockinfo->bytestride_time = gr_blockinfo->bytestride_polarization*gr_blockinfo->n_pol;
+  gr_blockinfo->bytestride_frequency = gr_blockinfo->bytestride_time*gr_blockinfo->n_time;
 
   gr_blockinfo->file_data_pos = lseek(fd, 0, SEEK_CUR);
   if(gr_blockinfo->directio == 1) {
-    gr_blockinfo->file_data_pos = (gr_blockinfo->file_data_pos + 511) & ~((off_t)511);
+    gr_blockinfo->file_data_pos = directio_align_value(gr_blockinfo->file_data_pos);
   }
 
   return 0;
 }
 
-int guppiraw_seek_next_block(int fd, guppiraw_block_info_t* gr_blockinfo) {
-  off_t next_header_pos = gr_blockinfo->file_data_pos + gr_blockinfo->block_size;
-  if(gr_blockinfo->directio == 1) {
-    next_header_pos = (next_header_pos + 511) & ~((off_t)511);
-  }
-  return lseek(fd, next_header_pos, 0);
+static inline int guppiraw_seek_next_block(int fd, guppiraw_block_info_t* gr_blockinfo) {
+  return lseek(
+    fd,
+    gr_blockinfo->directio == 1 ? directio_align_value(gr_blockinfo->file_data_pos + gr_blockinfo->block_size) : gr_blockinfo->file_data_pos + gr_blockinfo->block_size,
+    0
+  );
+}
+
+static inline int guppiraw_read_blockdata(int fd, guppiraw_block_info_t* gr_blockinfo, void* buffer) {
+  lseek(fd, gr_blockinfo->file_data_pos, 0);
+  return read(fd, buffer, gr_blockinfo->block_size);
 }
 
 #endif// GUPPI_RAW_C99_H_
