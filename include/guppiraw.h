@@ -55,39 +55,52 @@ typedef struct {
   off_t file_data_pos;
 } guppiraw_header_t;
 
+/*
+ * 
+ *
+ * Returns:
+ *  -1: `read(...)` returned -1 before `GUPPI_RAW_HEADER_END_STR`
+ *  0 : Successfully parsed the header
+ *  1 : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES`
+ */
 int guppiraw_read_header(int fd, guppiraw_header_t* gr_header) {
   gr_header->file_header_pos = lseek(fd, 0, SEEK_CUR);
 
   size_t header_entry_count = 0;
-  char entry[81];
+  
+  // Aligned to a 512-byte boundary so that it can be used
+  // with files opened with O_DIRECT.
+  char entry[81] __attribute__ ((aligned (512)));
   while(header_entry_count < GUPPI_RAW_HEADER_MAX_ENTRIES) {
-    read(fd,entry, 80);
+    if(read(fd, entry, 80) == 0) {
+      return -1;
+    }
+
     if(strncmp(entry, GUPPI_RAW_HEADER_END_STR, 80) == 0) {
       break;
     }
-    else if(gr_header != NULL){
-      switch (((uint64_t*)entry)[0])
-      {
-      case KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E'):
-        hgetu8(entry, "BLOCSIZE", &gr_header->block_size);
-        break;
-      case KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O'):
-        hgetl(entry, "DIRECTIO", &gr_header->directio);
-        break;
-      case KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N'):
-        hgetu4(entry, "OBSNCHAN", &gr_header->n_obschan);
-        break;
-      case KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' '):
-        hgetu4(entry, "NPOL", &gr_header->n_pol);
-        break;
-      case KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' '):
-        hgetu4(entry, "NBITS", &gr_header->n_bit);
-        break;
-      case KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' '):
-        hgetu4(entry, "NANTS", &gr_header->n_ant);
-        break;
-      default:
-        break;
+    else if(gr_header != NULL) {
+      switch (((uint64_t*)entry)[0]) {
+        case KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E'):
+          hgetu8(entry, "BLOCSIZE", &gr_header->block_size);
+          break;
+        case KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O'):
+          hgetl(entry, "DIRECTIO", &gr_header->directio);
+          break;
+        case KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N'):
+          hgetu4(entry, "OBSNCHAN", &gr_header->n_obschan);
+          break;
+        case KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' '):
+          hgetu4(entry, "NPOL", &gr_header->n_pol);
+          break;
+        case KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' '):
+          hgetu4(entry, "NBITS", &gr_header->n_bit);
+          break;
+        case KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' '):
+          hgetu4(entry, "NANTS", &gr_header->n_ant);
+          break;
+        default:
+          break;
       }
     }
   }
@@ -105,4 +118,11 @@ int guppiraw_read_header(int fd, guppiraw_header_t* gr_header) {
   return 0;
 }
 
+int guppiraw_seek_next(int fd, guppiraw_header_t* gr_header) {
+  off_t next_header_pos = gr_header->file_data_pos + gr_header->block_size;
+  if(gr_header->directio == 1) {
+    next_header_pos = (next_header_pos + 511) & ~((off_t)511);
+  }
+  return lseek(fd, next_header_pos, 0);
+}
 #endif// GUPPI_RAW_C99_H_
