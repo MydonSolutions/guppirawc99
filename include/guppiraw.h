@@ -51,6 +51,10 @@ typedef struct {
   uint32_t n_pol;
   uint32_t n_bit;
 
+  // User data
+  void (*header_entry_callback)(char* entry, void* user_data);
+  void* header_user_data;
+
   // Header inferred fields
   size_t n_time;
   size_t bytesize_complexsample;

@@ -44,6 +44,9 @@ int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
         default:
           break;
       }
+      if(gr_blockinfo->header_entry_callback != 0) {
+        gr_blockinfo->header_entry_callback(entry, gr_blockinfo->header_user_data);
+      }
     }
   }
 
