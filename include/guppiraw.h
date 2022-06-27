@@ -53,18 +53,18 @@ typedef struct {
 
   off_t file_header_pos;
   off_t file_data_pos;
-} guppiraw_header_t;
+} guppiraw_block_info_t;
 
 /*
  * 
  *
  * Returns:
- *  -1: `read(...)` returned -1 before `GUPPI_RAW_HEADER_END_STR`
+ *  -1: `read(...)` returned 0 before `GUPPI_RAW_HEADER_END_STR`
  *  0 : Successfully parsed the header
  *  1 : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES`
  */
-int guppiraw_read_header(int fd, guppiraw_header_t* gr_header) {
-  gr_header->file_header_pos = lseek(fd, 0, SEEK_CUR);
+int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
+  gr_blockinfo->file_header_pos = lseek(fd, 0, SEEK_CUR);
 
   size_t header_entry_count = 0;
   
@@ -79,25 +79,25 @@ int guppiraw_read_header(int fd, guppiraw_header_t* gr_header) {
     if(strncmp(entry, GUPPI_RAW_HEADER_END_STR, 80) == 0) {
       break;
     }
-    else if(gr_header != NULL) {
+    else if(gr_blockinfo != NULL) {
       switch (((uint64_t*)entry)[0]) {
         case KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E'):
-          hgetu8(entry, "BLOCSIZE", &gr_header->block_size);
+          hgetu8(entry, "BLOCSIZE", &gr_blockinfo->block_size);
           break;
         case KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O'):
-          hgetl(entry, "DIRECTIO", &gr_header->directio);
+          hgetl(entry, "DIRECTIO", &gr_blockinfo->directio);
           break;
         case KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N'):
-          hgetu4(entry, "OBSNCHAN", &gr_header->n_obschan);
+          hgetu4(entry, "OBSNCHAN", &gr_blockinfo->n_obschan);
           break;
         case KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' '):
-          hgetu4(entry, "NPOL", &gr_header->n_pol);
+          hgetu4(entry, "NPOL", &gr_blockinfo->n_pol);
           break;
         case KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' '):
-          hgetu4(entry, "NBITS", &gr_header->n_bit);
+          hgetu4(entry, "NBITS", &gr_blockinfo->n_bit);
           break;
         case KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' '):
-          hgetu4(entry, "NANTS", &gr_header->n_ant);
+          hgetu4(entry, "NANTS", &gr_blockinfo->n_ant);
           break;
         default:
           break;
@@ -110,19 +110,20 @@ int guppiraw_read_header(int fd, guppiraw_header_t* gr_header) {
     return 1;
   }
 
-  gr_header->file_data_pos = lseek(fd, 0, SEEK_CUR);
-  if(gr_header->directio == 1) {
-    gr_header->file_data_pos = (gr_header->file_data_pos + 511) & ~((off_t)511);
+  gr_blockinfo->file_data_pos = lseek(fd, 0, SEEK_CUR);
+  if(gr_blockinfo->directio == 1) {
+    gr_blockinfo->file_data_pos = (gr_blockinfo->file_data_pos + 511) & ~((off_t)511);
   }
 
   return 0;
 }
 
-int guppiraw_seek_next(int fd, guppiraw_header_t* gr_header) {
-  off_t next_header_pos = gr_header->file_data_pos + gr_header->block_size;
-  if(gr_header->directio == 1) {
+int guppiraw_seek_next_block(int fd, guppiraw_block_info_t* gr_blockinfo) {
+  off_t next_header_pos = gr_blockinfo->file_data_pos + gr_blockinfo->block_size;
+  if(gr_blockinfo->directio == 1) {
     next_header_pos = (next_header_pos + 511) & ~((off_t)511);
   }
   return lseek(fd, next_header_pos, 0);
 }
+
 #endif// GUPPI_RAW_C99_H_
