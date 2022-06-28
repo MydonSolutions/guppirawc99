@@ -2,6 +2,7 @@
 #define GUPPI_RAW_C99_H_
 
 #include <stdio.h>
+#include <malloc.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <string.h>
@@ -67,6 +68,15 @@ typedef struct {
   off_t file_data_pos;
 } guppiraw_block_info_t;
 
+typedef struct {
+  guppiraw_block_info_t block_info;
+  off_t bytesize_file;
+  int n_blocks;
+  // Block-position fields
+  off_t *file_header_pos;
+  off_t *file_data_pos;
+} guppiraw_file_info_t;
+
 /*
  * 
  *
@@ -76,6 +86,8 @@ typedef struct {
  *  1 : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES`
  */
 int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
+int guppiraw_skim_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
+int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo);
 
 static inline off_t directio_align_value(off_t value) {
   return (value + 511) & ~((off_t)511);
