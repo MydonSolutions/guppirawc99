@@ -29,19 +29,20 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
     else if(gr_blockinfo != NULL && parse) {
       switch (((uint64_t*)entry)[0]) {
         case KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E'):
-          hgetu8(entry, "BLOCSIZE", &gr_blockinfo->block_size);
-          break;
-        case KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O'):
-          hgetl(entry, "DIRECTIO", &gr_blockinfo->directio);
+          hgetu8(entry, "BLOCSIZE", &gr_blockinfo->datashape.block_size);
           break;
         case KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N'):
-          hgetu4(entry, "OBSNCHAN", &gr_blockinfo->n_obschan);
+          hgetu4(entry, "OBSNCHAN", &gr_blockinfo->datashape.n_obschan);
           break;
         case KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' '):
-          hgetu4(entry, "NPOL", &gr_blockinfo->n_pol);
+          hgetu4(entry, "NPOL", &gr_blockinfo->datashape.n_pol);
           break;
         case KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' '):
-          hgetu4(entry, "NBITS", &gr_blockinfo->n_bit);
+          hgetu4(entry, "NBITS", &gr_blockinfo->datashape.n_bit);
+          break;
+
+        case KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O'):
+          hgetl(entry, "DIRECTIO", &gr_blockinfo->directio);
           break;
         default:
           break;
@@ -77,14 +78,14 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
 int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
   int rv = _guppiraw_parse_blockheader(fd, gr_blockinfo, 1);
   if(rv == 0){
-    gr_blockinfo->bytesize_complexsample = (2*gr_blockinfo->n_bit)/8;
-    gr_blockinfo->n_time = gr_blockinfo->block_size / (
-      gr_blockinfo->n_obschan * gr_blockinfo->n_pol * gr_blockinfo->bytesize_complexsample
+    gr_blockinfo->datashape.bytesize_complexsample = (2*gr_blockinfo->datashape.n_bit)/8;
+    gr_blockinfo->datashape.n_time = gr_blockinfo->datashape.block_size / (
+      gr_blockinfo->datashape.n_obschan * gr_blockinfo->datashape.n_pol * gr_blockinfo->datashape.bytesize_complexsample
     );
 
-    gr_blockinfo->bytestride_polarization = gr_blockinfo->bytesize_complexsample;
-    gr_blockinfo->bytestride_time = gr_blockinfo->bytestride_polarization*gr_blockinfo->n_pol;
-    gr_blockinfo->bytestride_frequency = gr_blockinfo->bytestride_time*gr_blockinfo->n_time;
+    gr_blockinfo->datashape.bytestride_polarization = gr_blockinfo->datashape.bytesize_complexsample;
+    gr_blockinfo->datashape.bytestride_time = gr_blockinfo->datashape.bytestride_polarization*gr_blockinfo->datashape.n_pol;
+    gr_blockinfo->datashape.bytestride_frequency = gr_blockinfo->datashape.bytestride_time*gr_blockinfo->datashape.n_time;
   }
   return rv;
 }
@@ -113,7 +114,7 @@ int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
 
   guppiraw_read_blockheader(fd, ptr_blockinfo);
   guppiraw_seek_next_block(fd, ptr_blockinfo);
-  size_t bytesize_first_block = ptr_blockinfo->file_data_pos + directio_align_value(ptr_blockinfo->block_size);
+  size_t bytesize_first_block = ptr_blockinfo->file_data_pos + directio_align_value(ptr_blockinfo->datashape.block_size);
   gr_fileinfo->n_blocks = (gr_fileinfo->bytesize_file + bytesize_first_block-1)/bytesize_first_block;
 
   gr_fileinfo->file_header_pos = malloc(gr_fileinfo->n_blocks * sizeof(off_t));

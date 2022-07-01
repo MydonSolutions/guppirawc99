@@ -31,12 +31,12 @@ int main(int argc, char const *argv[])
     int block_id = 0;
     while(guppiraw_read_blockheader(raw_fd, &gr_blockinfo) == 0) {
       printf("\nblock #%d\n", block_id);
-      printf("\tblock_size: %lu\n", gr_blockinfo.block_size);
+      printf("\tblock_size: %lu\n", gr_blockinfo.datashape.block_size);
       printf("\tdirectio: %d\n", gr_blockinfo.directio);
-      printf("\tn_obschan: %u\n", gr_blockinfo.n_obschan);
-      printf("\tn_pol: %u\n", gr_blockinfo.n_pol);
-      printf("\tn_bit: %u\n", gr_blockinfo.n_bit);
-      printf("\tn_time: %lu\n", gr_blockinfo.n_time);
+      printf("\tn_obschan: %u\n", gr_blockinfo.datashape.n_obschan);
+      printf("\tn_pol: %u\n", gr_blockinfo.datashape.n_pol);
+      printf("\tn_bit: %u\n", gr_blockinfo.datashape.n_bit);
+      printf("\tn_time: %lu\n", gr_blockinfo.datashape.n_time);
       printf("\tnants: %d\n", ((guppiraw_block_meta_t*)gr_blockinfo.header_user_data)->nants);
       printf("\tchan_bw: %f\n", ((guppiraw_block_meta_t*)gr_blockinfo.header_user_data)->chan_bw);
       block_id ++;

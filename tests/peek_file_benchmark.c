@@ -14,22 +14,22 @@ int main(int argc, char const *argv[])
 
     printf("file_size: %lu (%f GB/s)\n", gr_fileinfo.bytesize_file, gr_fileinfo.bytesize_file/(elapsed_s * 1e9));
     printf("number of blocks: %d\n", gr_fileinfo.n_blocks);
-    printf("\tblock_size: %lu\n", gr_fileinfo.block_info.block_size);
+    printf("\tblock_size: %lu\n", gr_fileinfo.block_info.datashape.block_size);
     printf("\tdirectio: %d\n", gr_fileinfo.block_info.directio);
-    printf("\tn_obschan: %u\n", gr_fileinfo.block_info.n_obschan);
-    printf("\tn_pol: %u\n", gr_fileinfo.block_info.n_pol);
-    printf("\tn_bit: %u\n", gr_fileinfo.block_info.n_bit);
-    printf("\tn_time: %lu\n", gr_fileinfo.block_info.n_time);
+    printf("\tn_obschan: %u\n", gr_fileinfo.block_info.datashape.n_obschan);
+    printf("\tn_pol: %u\n", gr_fileinfo.block_info.datashape.n_pol);
+    printf("\tn_bit: %u\n", gr_fileinfo.block_info.datashape.n_bit);
+    printf("\tn_time: %lu\n", gr_fileinfo.block_info.datashape.n_time);
     
     lseek(raw_fd, gr_fileinfo.file_header_pos[gr_fileinfo.n_blocks-1], SEEK_SET);
     guppiraw_read_blockheader(raw_fd, &gr_fileinfo.block_info);
     printf("Last block info:\n");
-    printf("\tblock_size: %lu\n", gr_fileinfo.block_info.block_size);
+    printf("\tblock_size: %lu\n", gr_fileinfo.block_info.datashape.block_size);
     printf("\tdirectio: %d\n", gr_fileinfo.block_info.directio);
-    printf("\tn_obschan: %u\n", gr_fileinfo.block_info.n_obschan);
-    printf("\tn_pol: %u\n", gr_fileinfo.block_info.n_pol);
-    printf("\tn_bit: %u\n", gr_fileinfo.block_info.n_bit);
-    printf("\tn_time: %lu\n", gr_fileinfo.block_info.n_time);
+    printf("\tn_obschan: %u\n", gr_fileinfo.block_info.datashape.n_obschan);
+    printf("\tn_pol: %u\n", gr_fileinfo.block_info.datashape.n_pol);
+    printf("\tn_bit: %u\n", gr_fileinfo.block_info.datashape.n_bit);
+    printf("\tn_time: %lu\n", gr_fileinfo.block_info.datashape.n_time);
 
     guppiraw_seek_next_block(raw_fd, &gr_fileinfo.block_info);
     assert(guppiraw_read_blockheader(raw_fd, &gr_fileinfo.block_info) == -1);

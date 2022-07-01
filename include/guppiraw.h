@@ -46,22 +46,29 @@
 
 typedef struct {
   // Header populated fields
-  uint64_t block_size;
-  int directio;
   uint32_t n_obschan;
   uint32_t n_pol;
   uint32_t n_bit;
-
-  // User data
-  void (*header_entry_callback)(char* entry, void* user_data);
-  void* header_user_data;
+  uint64_t block_size;
 
   // Header inferred fields
   size_t n_time;
+
   size_t bytesize_complexsample;
   size_t bytestride_polarization;
   size_t bytestride_time;
   size_t bytestride_frequency;
+} guppiraw_datashape_t;
+
+typedef struct {
+  // Header populated fields
+  int directio;
+
+  guppiraw_datashape_t datashape;
+
+  // User data
+  void (*header_entry_callback)(char* entry, void* user_data);
+  void* header_user_data;
 
   // File position fields
   off_t file_header_pos;
@@ -96,14 +103,14 @@ static inline off_t directio_align_value(off_t value) {
 static inline int guppiraw_seek_next_block(int fd, guppiraw_block_info_t* gr_blockinfo) {
   return lseek(
     fd,
-    gr_blockinfo->directio == 1 ? directio_align_value(gr_blockinfo->file_data_pos + gr_blockinfo->block_size) : gr_blockinfo->file_data_pos + gr_blockinfo->block_size,
+    gr_blockinfo->directio == 1 ? directio_align_value(gr_blockinfo->file_data_pos + gr_blockinfo->datashape.block_size) : gr_blockinfo->file_data_pos + gr_blockinfo->datashape.block_size,
     0
   );
 }
 
 static inline int guppiraw_read_blockdata(int fd, guppiraw_block_info_t* gr_blockinfo, void* buffer) {
   lseek(fd, gr_blockinfo->file_data_pos, 0);
-  return read(fd, buffer, gr_blockinfo->block_size);
+  return read(fd, buffer, gr_blockinfo->datashape.block_size);
 }
 
 #endif// GUPPI_RAW_C99_H_
