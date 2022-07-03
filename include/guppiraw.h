@@ -5,6 +5,7 @@
 #include <malloc.h>
 #include <unistd.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
 
@@ -111,6 +112,48 @@ static inline int guppiraw_seek_next_block(int fd, guppiraw_block_info_t* gr_blo
 static inline int guppiraw_read_blockdata(int fd, guppiraw_block_info_t* gr_blockinfo, void* buffer) {
   lseek(fd, gr_blockinfo->file_data_pos, 0);
   return read(fd, buffer, gr_blockinfo->datashape.block_size);
+}
+
+typedef struct {
+  int fd;
+  int fileenum;
+  char* stempath;
+  int stempath_len;
+
+  guppiraw_file_info_t file_info;
+
+  int block_index;
+  size_t time_index;
+  size_t chan_index;
+} guppiraw_iterate_info_t;
+
+int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr_iterate);
+long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, size_t time, size_t chan, void* buffer);
+
+static inline long guppiraw_iterate_read_block(guppiraw_iterate_info_t* gr_iterate, void* buffer) {
+  return guppiraw_iterate_read(
+    gr_iterate,
+    gr_iterate->file_info.block_info.datashape.n_time,
+    gr_iterate->file_info.block_info.datashape.n_obschan,
+    buffer
+  );
+}
+
+static inline size_t guppiraw_iterate_bytesize(const guppiraw_iterate_info_t* gr_iterate, size_t time, size_t chan) {
+  return chan * time * (
+    gr_iterate->file_info.block_info.datashape.block_size / 
+      (
+        gr_iterate->file_info.block_info.datashape.n_obschan * 
+        gr_iterate->file_info.block_info.datashape.n_time
+    )
+  );
+}
+
+static inline size_t guppiraw_iterate_filentime_remaining(const guppiraw_iterate_info_t* gr_iterate) {
+  return (gr_iterate->file_info.n_blocks - gr_iterate->block_index)*
+    gr_iterate->file_info.block_info.datashape.n_time -
+     gr_iterate->time_index
+  ;
 }
 
 #endif// GUPPI_RAW_C99_H_

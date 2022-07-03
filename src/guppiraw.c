@@ -141,3 +141,110 @@ int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
 
   return rv;
 }
+
+int _guppiraw_iterate_open(guppiraw_iterate_info_t* gr_iterate) {
+  if(gr_iterate->fd > 0) {
+    close(gr_iterate->fd);
+    gr_iterate->fileenum++;
+  }
+  char* filepath = malloc(gr_iterate->stempath_len+9+1);
+  sprintf(filepath, "%s.%04d.raw", gr_iterate->stempath, gr_iterate->fileenum);
+  gr_iterate->fd = open(filepath, O_RDONLY);
+  free(filepath);
+  if(gr_iterate->fd <= 0) {
+    return 1;
+  }
+  gr_iterate->block_index = 0;
+  return guppiraw_skim_file(gr_iterate->fd, &gr_iterate->file_info);
+}
+
+int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr_iterate) {
+  gr_iterate->stempath_len = strlen(filepath);
+
+  // handle if filepath is not just the stempath
+  gr_iterate->fd = open(filepath, O_RDONLY);
+  if(gr_iterate->fd != -1) {
+    close(gr_iterate->fd);
+
+    // `filepath` is the `filestem.\d{4}.raw`
+    gr_iterate->stempath_len = strlen(filepath)-9;
+    gr_iterate->fileenum = atoi(filepath + gr_iterate->stempath_len + 1);
+  }
+
+  gr_iterate->stempath = malloc(gr_iterate->stempath_len);
+  strncpy(gr_iterate->stempath, filepath, gr_iterate->stempath_len);
+  
+  gr_iterate->fd = 0;
+  return _guppiraw_iterate_open(gr_iterate);
+}
+
+long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, size_t time, size_t chan, void* buffer) {
+  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.datashape;
+  if(gr_iterate->chan_index + chan > datashape->n_obschan) {
+    // cannot gather in channel dimension
+    fprintf(stderr, "Error: cannot gather in channel dimension.\n");
+    return -1;
+  }
+  // check that time request is a factor of remaining file_ntime
+  if(guppiraw_iterate_filentime_remaining(gr_iterate) < time) {
+    // TODO handle 2 files at a time.
+    fprintf(
+      stderr,
+      "Error: remaining file_ntime (%d*%lu-%lu) is less than iteration time (%lu).\n",
+      (gr_iterate->file_info.n_blocks - gr_iterate->block_index),
+      gr_iterate->time_index,
+      datashape->n_time,
+      time
+    );
+    return -1;
+  }
+
+  // interleave time-slice reads for different channels (maintain frequency as slowest axis)
+  const size_t chan_step = time != datashape->n_time ? 1 : chan;
+  // can read at most NTIME in the time dimension
+  const size_t time_step = time > datashape->n_time ? datashape->n_time : time;
+
+  const size_t read_size = guppiraw_iterate_bytesize(gr_iterate, time_step, chan_step);
+  const size_t chan_step_stride = guppiraw_iterate_bytesize(gr_iterate, time, 1);
+
+  long bytes_read = 0;
+  if(buffer != NULL) {
+    for (size_t time_i = 0; time_i < time/time_step; time_i++) {
+      const size_t time_index = gr_iterate->time_index + time_i*time_step;
+      for (size_t chan_i = 0; chan_i < chan/chan_step; chan_i++) {
+        const size_t chan_index = gr_iterate->chan_index + chan_i*chan_step;
+        lseek(
+          gr_iterate->fd,
+          gr_iterate->file_info.file_data_pos[gr_iterate->block_index + (time_index / datashape->n_time)] + 
+            (time_index % datashape->n_time) * datashape->bytestride_time +
+            chan_index * datashape->bytestride_frequency,
+          SEEK_SET
+        );
+        bytes_read += read(
+          gr_iterate->fd,
+          buffer + 
+            chan_i*chan_step_stride +
+            time_i*read_size,
+          read_size
+        );
+      }
+    }
+  }
+
+  gr_iterate->time_index = (gr_iterate->time_index + time) % datashape->n_time;
+  gr_iterate->chan_index = (gr_iterate->chan_index + chan) % datashape->n_obschan;
+  if(gr_iterate->chan_index == 0 && gr_iterate->time_index == 0) {
+    // increment to at least the next block
+    if(time < datashape->n_time) {
+      gr_iterate->block_index += 1;  
+    }
+    else {
+      gr_iterate->block_index += time / datashape->n_time;
+    }
+    if(gr_iterate->block_index == gr_iterate->file_info.n_blocks) {
+      _guppiraw_iterate_open(gr_iterate);
+    }
+  }
+
+  return bytes_read;
+}
