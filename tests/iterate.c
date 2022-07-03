@@ -71,18 +71,61 @@ size_t validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, siz
   return bytes_invalid;
 }
 
+size_t benchmark_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_t nchan, size_t repeat_time) {
+  const guppiraw_datashape_t *datashape = &gr_iterate->file_info.block_info.datashape;
+  size_t bytesize = guppiraw_iterate_bytesize(gr_iterate, ntime, nchan);
+
+  // validate all channels
+  const size_t repeat_chan = datashape->n_obschan/nchan;
+  const size_t repetitions = repeat_time * repeat_chan;
+  
+  void *buffer = malloc(bytesize);
+  clock_t start = clock();
+
+  size_t repitition;
+  for(repitition = 0; repitition < repetitions && gr_iterate->fd >= 0; repitition++) {
+    if(guppiraw_iterate_read(
+      gr_iterate,
+      ntime,
+      nchan,
+      buffer
+    ) != bytesize) {
+      fprintf(stderr, "ERROR!");
+      return 1;
+    }
+  };
+
+  double elapsed_s = (double)(clock() - start)/ CLOCKS_PER_SEC;
+
+  printf("iterations: %lu / %f s (%f GB/s)\n",
+    repitition,
+    elapsed_s,
+    repitition*bytesize/(elapsed_s * 1e9)
+  );
+  
+  free(buffer);
+  return 0;
+}
+
 int main(int argc, char const *argv[])
 {
+  int benchmark_not_validate = 0;
   if(argc != 2) {
-    printf(
-      "Usage: `%s input_filepath`\n",
-      argv[0]
-    );
-    return 1;
+    if(!(argc == 3 && strncmp("-b", argv[1], 2)) == 0) {
+      fprintf(
+        stderr,
+        "Usage: `%s [opttions] input_filepath`\n"\
+        "options:\n\t"\
+        "-b\t\tBenchmark instead of validate.\n",
+        argv[0]
+      );
+      return 1;
+    }
+    benchmark_not_validate = 1;
   }
 
   guppiraw_iterate_info_t gr_iterate = {0};
-  if(guppiraw_iterate_open_stem(argv[1], &gr_iterate)) {
+  if(guppiraw_iterate_open_stem(argv[argc-1], &gr_iterate)) {
     printf("Could not open: %s.%04d.raw\n", gr_iterate.stempath, gr_iterate.fileenum);
     return 1;
   }
@@ -110,28 +153,27 @@ int main(int argc, char const *argv[])
               gr_iterate.block_index = 0;
             }
             printf(
-              "Iteration (x%lu): block #%d[c=%lu,t=%lu] time=%lu (%d), chan=%lu (%d)...",
+              "Iteration (x%lu full bands): block #%d[c=%lu,t=%lu] time=%lu/%lu, chan=%lu/%u...",
               time_repetitions,
               gr_iterate.block_index,
               gr_iterate.chan_index, gr_iterate.time_index,
-              ntime, factors[ti],
-              nchan, factors[ci]
+              ntime, datashape->n_time,
+              nchan, datashape->n_obschan
             );
 
-            const size_t bytes_invalid = validate_iteration(&gr_iterate, ntime, nchan, time_repetitions);
+            const size_t bytes_invalid = benchmark_not_validate ? 
+              benchmark_iteration(&gr_iterate, ntime, nchan, time_repetitions) :
+              validate_iteration(&gr_iterate, ntime, nchan, time_repetitions);
+
             if(bytes_invalid != 0){
-              if(guppiraw_iterate_filentime_remaining(&gr_iterate) < ntime) {
-                return 0;
-              }
               printf("failed (%lu/%lu bytes invalid).\n",
                 bytes_invalid, datashape->block_size
               );
               return 1;
             }
-            else {
+            if(!benchmark_not_validate) {
               printf("passed\n");
             }
-
           }
         }
 
