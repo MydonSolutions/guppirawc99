@@ -3,6 +3,21 @@
 #include <assert.h>
 #include "guppiraw.h"
 
+typedef struct {
+  int nants;
+} guppiraw_block_meta_t;
+
+void guppiraw_parse_block_meta(char* entry, void* block_meta_void) {
+  guppiraw_block_meta_t* block_meta = (guppiraw_block_meta_t*) block_meta_void;
+  switch (((uint64_t*)entry)[0]) {
+    case KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' '):
+      hgeti4(entry, "NANTS", &block_meta->nants);
+      break;
+    default:
+      break;
+  }
+}
+
 size_t validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_t nchan, size_t repeat_time) {
   const guppiraw_datashape_t *datashape = &gr_iterate->file_info.block_info.datashape;
 
@@ -125,6 +140,9 @@ int main(int argc, char const *argv[])
   }
 
   guppiraw_iterate_info_t gr_iterate = {0};
+  gr_iterate.file_info.block_info.header_user_data = malloc(sizeof(guppiraw_block_meta_t));
+  gr_iterate.file_info.block_info.header_entry_callback = guppiraw_parse_block_meta;
+  
   if(guppiraw_iterate_open_stem(argv[argc-1], &gr_iterate)) {
     printf("Could not open: %s.%04d.raw\n", gr_iterate.stempath, gr_iterate.fileenum);
     return 1;
