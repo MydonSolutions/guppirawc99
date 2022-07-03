@@ -231,19 +231,22 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, size_t time, siz
     }
   }
 
-  gr_iterate->time_index = (gr_iterate->time_index + time) % datashape->n_time;
   gr_iterate->chan_index = (gr_iterate->chan_index + chan) % datashape->n_obschan;
-  if(gr_iterate->chan_index == 0 && gr_iterate->time_index == 0) {
-    // increment to at least the next block
-    if(time < datashape->n_time) {
-      gr_iterate->block_index += 1;  
+  if(gr_iterate->chan_index == 0) {
+    if(gr_iterate->time_index + time >= datashape->n_time) {
+      // increment to at least the next block
+      if(time < datashape->n_time) {
+        gr_iterate->block_index += 1;  
+      }
+      else {
+        gr_iterate->block_index += time / datashape->n_time;
+      }
+      if(gr_iterate->block_index == gr_iterate->file_info.n_blocks) {
+        _guppiraw_iterate_open(gr_iterate);
+      }
     }
-    else {
-      gr_iterate->block_index += time / datashape->n_time;
-    }
-    if(gr_iterate->block_index == gr_iterate->file_info.n_blocks) {
-      _guppiraw_iterate_open(gr_iterate);
-    }
+
+    gr_iterate->time_index = (gr_iterate->time_index + time) % datashape->n_time;
   }
 
   return bytes_read;
