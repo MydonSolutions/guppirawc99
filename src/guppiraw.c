@@ -148,7 +148,7 @@ int _guppiraw_iterate_open(guppiraw_iterate_info_t* gr_iterate) {
     gr_iterate->fileenum++;
   }
   char* filepath = malloc(gr_iterate->stempath_len+9+1);
-  sprintf(filepath, "%s.%04d.raw", gr_iterate->stempath, gr_iterate->fileenum);
+  sprintf(filepath, "%s.%04d.raw", gr_iterate->stempath, gr_iterate->fileenum%10000);
   gr_iterate->fd = open(filepath, O_RDONLY);
   free(filepath);
   if(gr_iterate->fd <= 0) {
@@ -173,6 +173,7 @@ int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr
 
   gr_iterate->stempath = malloc(gr_iterate->stempath_len);
   strncpy(gr_iterate->stempath, filepath, gr_iterate->stempath_len);
+  gr_iterate->stempath[gr_iterate->stempath_len] = '\0';
   
   gr_iterate->fd = 0;
   return _guppiraw_iterate_open(gr_iterate);
