@@ -11,7 +11,9 @@
 
 #include "fitsheader.h"
 
-#define GUPPI_RAW_HEADER_MAX_ENTRIES 1024
+#define GUPPI_RAW_HEADER_MAX_ENTRIES 2048
+#define GUPPI_RAW_HEADER_DIGEST_BYTES 5*4096 // LCM(80, 4096)
+#define GUPPI_RAW_HEADER_DIGEST_ENTRIES (GUPPI_RAW_HEADER_DIGEST_BYTES/80)
 #define GUPPI_RAW_HEADER_END_STR \
 "END                                                                             "
 

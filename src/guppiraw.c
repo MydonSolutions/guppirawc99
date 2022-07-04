@@ -17,16 +17,19 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
   
   // Aligned to a 512-byte boundary so that it can be used
   // with files opened with O_DIRECT.
-  char entry[81] __attribute__ ((aligned (512)));
-  while(header_entry_count < GUPPI_RAW_HEADER_MAX_ENTRIES) {
-    if(read(fd, entry, 80) == 0) {
-      return -1;
+  char entries[GUPPI_RAW_HEADER_DIGEST_BYTES] __attribute__ ((aligned (512)));
+  char *entry = entries;
+  while(strncmp(entry, GUPPI_RAW_HEADER_END_STR, 80) != 0 && header_entry_count < GUPPI_RAW_HEADER_MAX_ENTRIES) {
+
+    if(header_entry_count%GUPPI_RAW_HEADER_DIGEST_ENTRIES == 0){
+      // read GUPPI_RAW_HEADER_DIGEST_ENTRIES at a time
+      if(read(fd, entries, GUPPI_RAW_HEADER_DIGEST_BYTES) == 0) {
+        return -1;
+      }
+      entry = entries;
     }
 
-    if(strncmp(entry, GUPPI_RAW_HEADER_END_STR, 80) == 0) {
-      break;
-    }
-    else if(gr_blockinfo != NULL && parse) {
+    if(gr_blockinfo != NULL && parse) {
       switch (((uint64_t*)entry)[0]) {
         case KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E'):
           hgetu8(entry, "BLOCSIZE", &gr_blockinfo->datashape.block_size);
@@ -51,10 +54,14 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
         gr_blockinfo->header_entry_callback(entry, gr_blockinfo->header_user_data);
       }
     }
+    entry += 80;
+    header_entry_count++;
   }
+  // seek to before the excess bytes read (to after the uncounted END header_entry)
+  lseek(fd, (GUPPI_RAW_HEADER_DIGEST_ENTRIES-((header_entry_count+1)%GUPPI_RAW_HEADER_DIGEST_ENTRIES))*-80, SEEK_CUR);
 
   if(header_entry_count == GUPPI_RAW_HEADER_MAX_ENTRIES) {
-    fprintf(stderr, "GuppiRaw: header END not found within %ld entries.", header_entry_count);
+    fprintf(stderr, "GuppiRaw: header END not found within %ld entries.\n", header_entry_count);
     return 1;
   }
 
@@ -112,7 +119,10 @@ int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
   gr_fileinfo->bytesize_file = lseek(fd, 0, SEEK_END);
   lseek(fd, 0, SEEK_SET);
 
-  guppiraw_read_blockheader(fd, ptr_blockinfo);
+  int rv = guppiraw_read_blockheader(fd, ptr_blockinfo);
+  if(rv){
+    return rv;
+  }
   guppiraw_seek_next_block(fd, ptr_blockinfo);
   size_t bytesize_first_block = ptr_blockinfo->file_data_pos + directio_align_value(ptr_blockinfo->datashape.block_size);
   gr_fileinfo->n_blocks = (gr_fileinfo->bytesize_file + bytesize_first_block-1)/bytesize_first_block;
@@ -126,7 +136,6 @@ int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
   ptr_blockinfo = &temp_blockinfo;
   memcpy(ptr_blockinfo, &gr_fileinfo->block_info, sizeof(guppiraw_block_info_t));
 
-  int rv = 0;
   for(int i = 1; i < gr_fileinfo->n_blocks; i++) {
     rv = guppiraw_skim_blockheader(fd, ptr_blockinfo);
     if(rv != 0) {

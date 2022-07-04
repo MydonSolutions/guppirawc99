@@ -144,7 +144,7 @@ int main(int argc, char const *argv[])
   gr_iterate.file_info.block_info.header_entry_callback = guppiraw_parse_block_meta;
   
   if(guppiraw_iterate_open_stem(argv[argc-1], &gr_iterate)) {
-    printf("Could not open: %s.%04d.raw\n", gr_iterate.stempath, gr_iterate.fileenum);
+    printf("Error opening: %s.%04d.raw\n", gr_iterate.stempath, gr_iterate.fileenum);
     return 1;
   }
 
