@@ -111,8 +111,8 @@ static inline int guppiraw_seek_next_block(int fd, guppiraw_block_info_t* gr_blo
   );
 }
 
-static inline int guppiraw_read_blockdata(int fd, guppiraw_block_info_t* gr_blockinfo, void* buffer) {
-  lseek(fd, gr_blockinfo->file_data_pos, 0);
+static inline int guppiraw_read_blockdata(int fd, const guppiraw_block_info_t* gr_blockinfo, void* buffer) {
+  lseek(fd, gr_blockinfo->file_data_pos, SEEK_SET);
   return read(fd, buffer, gr_blockinfo->datashape.block_size);
 }
 
@@ -130,7 +130,7 @@ typedef struct {
 } guppiraw_iterate_info_t;
 
 int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr_iterate);
-long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, size_t time, size_t chan, void* buffer);
+long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t time, const size_t chan, void* buffer);
 
 static inline long guppiraw_iterate_read_block(guppiraw_iterate_info_t* gr_iterate, void* buffer) {
   return guppiraw_iterate_read(

@@ -192,7 +192,42 @@ int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr
   return _guppiraw_iterate_open(gr_iterate);
 }
 
-long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, size_t time, size_t chan, void* buffer) {
+static inline long _guppiraw_read_time_gap(
+  const guppiraw_iterate_info_t* gr_iterate,
+  const size_t time, const size_t time_step,
+  const size_t chan, const size_t chan_step,
+  const size_t read_size, const size_t chan_step_stride,
+  void* buffer
+) {
+  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.datashape;
+  
+  const size_t chan_steps = chan/chan_step;
+  const size_t time_steps = time/time_step;
+  long bytes_read = 0;
+
+  for (size_t time_i = 0; time_i < time_steps; time_i++) {
+    const size_t time_index = gr_iterate->time_index + time_i*time_step;
+    for (size_t chan_i = 0; chan_i < chan_steps; chan_i++) {
+      lseek(
+        gr_iterate->fd,
+        gr_iterate->file_info.file_data_pos[gr_iterate->block_index + (time_index / datashape->n_time)] + 
+          (time_index % datashape->n_time) * datashape->bytestride_time +
+          (gr_iterate->chan_index + chan_i*chan_step) * datashape->bytestride_frequency,
+        SEEK_SET
+      );
+      bytes_read += read(
+        gr_iterate->fd,
+        buffer + 
+          chan_i*chan_step_stride +
+          time_i*read_size,
+        read_size
+      );
+    }
+  }
+  return bytes_read;
+}
+
+long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t time, const size_t chan, void* buffer) {
   const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.datashape;
   if(gr_iterate->chan_index + chan > datashape->n_obschan) {
     // cannot gather in channel dimension
@@ -213,35 +248,28 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, size_t time, siz
     return -1;
   }
 
-  // interleave time-slice reads for different channels (maintain frequency as slowest axis)
-  const size_t chan_step = time != datashape->n_time ? 1 : chan;
-  // can read at most NTIME in the time dimension
-  const size_t time_step = time > datashape->n_time ? datashape->n_time : time;
-
-  const size_t read_size = guppiraw_iterate_bytesize(gr_iterate, time_step, chan_step);
-  const size_t chan_step_stride = guppiraw_iterate_bytesize(gr_iterate, time, 1);
-
   long bytes_read = 0;
   if(buffer != NULL) {
-    for (size_t time_i = 0; time_i < time/time_step; time_i++) {
-      const size_t time_index = gr_iterate->time_index + time_i*time_step;
-      for (size_t chan_i = 0; chan_i < chan/chan_step; chan_i++) {
-        const size_t chan_index = gr_iterate->chan_index + chan_i*chan_step;
-        lseek(
-          gr_iterate->fd,
-          gr_iterate->file_info.file_data_pos[gr_iterate->block_index + (time_index / datashape->n_time)] + 
-            (time_index % datashape->n_time) * datashape->bytestride_time +
-            chan_index * datashape->bytestride_frequency,
-          SEEK_SET
-        );
-        bytes_read += read(
-          gr_iterate->fd,
-          buffer + 
-            chan_i*chan_step_stride +
-            time_i*read_size,
-          read_size
-        );
-      }
+    if(time == datashape->n_time && chan == datashape->n_obschan && gr_iterate->chan_index == 0 && gr_iterate->time_index == 0) {
+      lseek(gr_iterate->fd, gr_iterate->file_info.file_data_pos[gr_iterate->block_index], SEEK_SET);
+      bytes_read += read(gr_iterate->fd, buffer, datashape->block_size);
+    }
+    else {
+      // interleave time-slice reads for different channels (maintain frequency as slowest axis)
+      const size_t chan_step = time != datashape->n_time ? 1 : chan;
+      // can read at most NTIME in the time dimension
+      const size_t time_step = time > datashape->n_time ? datashape->n_time : time;
+
+      const size_t read_size = guppiraw_iterate_bytesize(gr_iterate, time_step, chan_step);
+      const size_t chan_step_stride = guppiraw_iterate_bytesize(gr_iterate, time, 1);
+
+      bytes_read += _guppiraw_read_time_gap(
+        gr_iterate,
+        time, time_step,
+        chan, chan_step,
+        read_size, chan_step_stride,
+        buffer
+      );
     }
   }
 
