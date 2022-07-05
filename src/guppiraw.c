@@ -45,7 +45,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
           break;
 
         case KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O'):
-          hgetl(entry, "DIRECTIO", &gr_blockinfo->directio);
+          hgeti4(entry, "DIRECTIO", &gr_blockinfo->directio);
           break;
         default:
           break;
@@ -58,7 +58,11 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
     header_entry_count++;
   }
   // seek to before the excess bytes read (to after the uncounted END header_entry)
-  lseek(fd, (GUPPI_RAW_HEADER_DIGEST_ENTRIES-((header_entry_count+1)%GUPPI_RAW_HEADER_DIGEST_ENTRIES))*-80, SEEK_CUR);
+  off_t data_start_pos = lseek(
+    fd,
+    (GUPPI_RAW_HEADER_DIGEST_ENTRIES-((header_entry_count+1)%GUPPI_RAW_HEADER_DIGEST_ENTRIES))*-80,
+    SEEK_CUR
+  );
 
   if(header_entry_count == GUPPI_RAW_HEADER_MAX_ENTRIES) {
     fprintf(stderr, "GuppiRaw: header END not found within %ld entries.\n", header_entry_count);
@@ -66,7 +70,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
   }
 
   if(gr_blockinfo != NULL) {
-    gr_blockinfo->file_data_pos = lseek(fd, 0, SEEK_CUR);
+    gr_blockinfo->file_data_pos = data_start_pos;
     if(gr_blockinfo->directio == 1) {
       gr_blockinfo->file_data_pos = directio_align_value(gr_blockinfo->file_data_pos);
     }
