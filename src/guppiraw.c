@@ -31,20 +31,19 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
 
     if(gr_blockinfo != NULL && parse) {
       switch (((uint64_t*)entry)[0]) {
-        case KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E'):
+        case GUPPI_RAW_KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E'):
           hgetu8(entry, "BLOCSIZE", &gr_blockinfo->datashape.block_size);
           break;
-        case KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N'):
+        case GUPPI_RAW_KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N'):
           hgetu4(entry, "OBSNCHAN", &gr_blockinfo->datashape.n_obschan);
           break;
-        case KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' '):
+        case GUPPI_RAW_KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' '):
           hgetu4(entry, "NPOL", &gr_blockinfo->datashape.n_pol);
           break;
-        case KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' '):
+        case GUPPI_RAW_KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' '):
           hgetu4(entry, "NBITS", &gr_blockinfo->datashape.n_bit);
           break;
-
-        case KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O'):
+        case GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O'):
           hgeti4(entry, "DIRECTIO", &gr_blockinfo->directio);
           break;
         default:

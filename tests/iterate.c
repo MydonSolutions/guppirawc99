@@ -10,7 +10,7 @@ typedef struct {
 void guppiraw_parse_block_meta(char* entry, void* block_meta_void) {
   guppiraw_block_meta_t* block_meta = (guppiraw_block_meta_t*) block_meta_void;
   switch (((uint64_t*)entry)[0]) {
-    case KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' '):
+    case GUPPI_RAW_KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' '):
       hgeti4(entry, "NANTS", &block_meta->nants);
       break;
     default:
