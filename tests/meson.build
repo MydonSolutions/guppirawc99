@@ -17,3 +17,8 @@ test('iterate', executable(
   args: ['/mnt/buf0/synth_large.0000.raw'],
   timeout: false
 )
+
+executable(
+'key_comparison', ['key_comparison.c'],
+  dependencies: lib_guppiraw_dep,
+)

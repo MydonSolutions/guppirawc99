@@ -1,5 +1,11 @@
 #include "guppiraw.h"
 
+static const uint64_t KEY_BLOCSIZE  = GUPPI_RAW_KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E');
+static const uint64_t KEY_OBSNCHAN  = GUPPI_RAW_KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N');
+static const uint64_t KEY_NPOL      = GUPPI_RAW_KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' ');
+static const uint64_t KEY_NBITS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' ');
+static const uint64_t KEY_DIRECTIO  = GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O');
+
 /*
  * 
  *
@@ -30,25 +36,17 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
     }
 
     if(gr_blockinfo != NULL && parse) {
-      switch (((uint64_t*)entry)[0]) {
-        case GUPPI_RAW_KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E'):
-          hgetu8(entry, "BLOCSIZE", &gr_blockinfo->datashape.block_size);
-          break;
-        case GUPPI_RAW_KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N'):
-          hgetu4(entry, "OBSNCHAN", &gr_blockinfo->datashape.n_obschan);
-          break;
-        case GUPPI_RAW_KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' '):
-          hgetu4(entry, "NPOL", &gr_blockinfo->datashape.n_pol);
-          break;
-        case GUPPI_RAW_KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' '):
-          hgetu4(entry, "NBITS", &gr_blockinfo->datashape.n_bit);
-          break;
-        case GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O'):
-          hgeti4(entry, "DIRECTIO", &gr_blockinfo->directio);
-          break;
-        default:
-          break;
-      }
+      if(((uint64_t*)entry)[0] == KEY_BLOCSIZE)
+        hgetu8(entry, "BLOCSIZE", &gr_blockinfo->datashape.block_size);
+      else if(((uint64_t*)entry)[0] == KEY_OBSNCHAN)
+        hgetu4(entry, "OBSNCHAN", &gr_blockinfo->datashape.n_obschan);
+      else if(((uint64_t*)entry)[0] == KEY_NPOL)
+        hgetu4(entry, "NPOL", &gr_blockinfo->datashape.n_pol);
+      else if(((uint64_t*)entry)[0] == KEY_NBITS)
+        hgetu4(entry, "NBITS", &gr_blockinfo->datashape.n_bit);
+      else if(((uint64_t*)entry)[0] == KEY_DIRECTIO)
+        hgeti4(entry, "DIRECTIO", &gr_blockinfo->directio);
+
       if(gr_blockinfo->header_entry_callback != 0) {
         gr_blockinfo->header_entry_callback(entry, gr_blockinfo->header_user_data);
       }

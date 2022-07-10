@@ -1,0 +1,5 @@
+strncmp(...8): 80.041394 s
+KEYSTR_ == const uint64_t: 26.331591 s
+(uint64_t*)[0] == const uint64_t: 4.599079 s
+(uint64_t)key == const uint64_t: 5.912729 s
+switch((uint64_t*)[0]): 7.154332 s
