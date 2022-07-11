@@ -14,7 +14,7 @@ int main(int argc, char const *argv[])
 
 	void* data = malloc(block_size);
 
-	int fd = open("./synth.0000.raw", O_WRONLY|O_CREAT);
+	int fd = open("./synth.0000.raw", O_WRONLY|O_CREAT, 0644);
 	if(fd < 1) {
 		fprintf(stderr, "Could not write to './synth.0000.raw': %d\n", fd);
 		return 1;
