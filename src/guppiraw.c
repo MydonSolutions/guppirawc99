@@ -417,3 +417,24 @@ void guppiraw_header_free(guppiraw_header_t* header) {
   free(header->head);
   header->n_entries = 0;
 }
+
+const char _guppiraw_directio_padding_buffer[513] = 
+"********************************************************************************************************************************"
+"********************************************************************************************************************************"
+"********************************************************************************************************************************"
+"********************************************************************************************************************************";
+
+void guppiraw_write_block(int fd, guppiraw_header_t* header, void* data, uint32_t block_size, char directio) {
+  char* header_string = guppiraw_header_malloc_string(header);
+  const size_t header_string_len = (header->n_entries+1) * 80;
+  off_t file_pos = lseek(fd, 0, SEEK_CUR);
+  file_pos += write(fd, header_string, header_string_len);
+  if(directio) {
+    file_pos += write(fd, _guppiraw_directio_padding_buffer, guppiraw_directio_align_value(file_pos) - file_pos);
+  }
+  file_pos += write(fd, data, block_size);
+  if(directio) {
+    write(fd, _guppiraw_directio_padding_buffer, guppiraw_directio_align_value(file_pos) - file_pos);
+  }
+  free(header_string);
+}

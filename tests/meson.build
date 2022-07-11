@@ -23,6 +23,12 @@ test('header', executable(
   ),
   timeout: false
 )
+test('write', executable(
+  'write', ['write.c'],
+	  dependencies: lib_guppiraw_dep,
+  ),
+  timeout: false
+)
 
 executable(
 'key_comparison', ['key_comparison.c'],
