@@ -15,8 +15,9 @@ static const uint64_t KEY_DIRECTIO  = GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E'
  *  1 : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES`
  */
 int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int parse) {
+  const off_t header_start_pos = lseek(fd, 0, SEEK_CUR);
   if(gr_blockinfo != NULL) {
-    gr_blockinfo->file_header_pos = lseek(fd, 0, SEEK_CUR);
+    gr_blockinfo->file_header_pos = header_start_pos;
   }
 
   size_t header_entry_count = 0;
@@ -57,8 +58,8 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
   // seek to before the excess bytes read (to after the uncounted END header_entry)
   off_t data_start_pos = lseek(
     fd,
-    (GUPPI_RAW_HEADER_DIGEST_ENTRIES-((header_entry_count+1)%GUPPI_RAW_HEADER_DIGEST_ENTRIES))*-80,
-    SEEK_CUR
+    header_start_pos + (header_entry_count+1)*80,
+    SEEK_SET
   );
 
   if(header_entry_count == GUPPI_RAW_HEADER_MAX_ENTRIES) {
