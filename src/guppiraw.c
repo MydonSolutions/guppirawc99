@@ -83,18 +83,36 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
  *  -1: `read(...)` returned 0 before `GUPPI_RAW_HEADER_END_STR`
  *  0 : Successfully parsed the header
  *  1 : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES`
+ *  2 : Header is inappropriate (missing `BLOCSIZE`)
  */
 int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
   int rv = _guppiraw_parse_blockheader(fd, gr_blockinfo, 1);
   if(rv == 0){
-    gr_blockinfo->datashape.bytesize_complexsample = (2*gr_blockinfo->datashape.n_bit)/8;
-    gr_blockinfo->datashape.n_time = gr_blockinfo->datashape.block_size / (
-      gr_blockinfo->datashape.n_obschan * gr_blockinfo->datashape.n_pol * gr_blockinfo->datashape.bytesize_complexsample
-    );
+    guppiraw_datashape_t* datashape = &gr_blockinfo->datashape;
+    if(datashape->block_size == 0) {
+      fprintf(stderr, "GuppiRaw Error: Header is missing a definition for `BLOCSIZE`.\n");
+      return 2;
+    }
 
-    gr_blockinfo->datashape.bytestride_polarization = gr_blockinfo->datashape.bytesize_complexsample;
-    gr_blockinfo->datashape.bytestride_time = gr_blockinfo->datashape.bytestride_polarization*gr_blockinfo->datashape.n_pol;
-    gr_blockinfo->datashape.bytestride_frequency = gr_blockinfo->datashape.bytestride_time*gr_blockinfo->datashape.n_time;
+    if(datashape->n_obschan * datashape->n_pol * datashape->n_bit == 0) {
+      // some factor is zero!
+      fprintf(
+        stderr,
+        "GuppiRaw Warning: some dimension-lengths are zero, will fallback! [OBSNCHAN:%u->1, NPOL:%d->1, NBITS:%d->4]\n",
+        datashape->n_obschan, datashape->n_pol, datashape->n_bit
+      );
+      datashape->n_obschan = 1;
+      datashape->n_pol = 1;
+      datashape->n_bit = 4;
+    }
+
+    datashape->bytesize_complexsample = (2*datashape->n_bit)/8;
+    const size_t denominator = datashape->n_obschan * datashape->n_pol * datashape->bytesize_complexsample;
+    datashape->n_time = datashape->block_size / (denominator);
+
+    datashape->bytestride_polarization = datashape->bytesize_complexsample;
+    datashape->bytestride_time = datashape->bytestride_polarization*datashape->n_pol;
+    datashape->bytestride_frequency = datashape->bytestride_time*datashape->n_time;
   }
   return rv;
 }
@@ -113,6 +131,7 @@ int guppiraw_skim_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
  * Returns:
  *  -X: `read(...)` returned 0 before `GUPPI_RAW_HEADER_END_STR` for Block X
  *  0 : Successfully parsed the first and skimmed all the other headers in the file
+ *  2 : First Header is inappropriate (missing `BLOCSIZE`)
  *  X : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES` for Block X
  */
 int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
@@ -153,6 +172,14 @@ int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
   return rv;
 }
 
+/*
+ * Returns:
+ *  -X: `read(...)` returned 0 before `GUPPI_RAW_HEADER_END_STR` for Block X
+ *  0 : Successfully parsed the first and skimmed all the other headers in the file
+ *  2 : First Header is inappropriate (missing `BLOCSIZE`)
+ *  3 : Could not open the file `"%s.%04d.raw": gr_iterate->stempath, gr_iterate->fileenum`
+ *  X : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES` for Block X
+ */
 int _guppiraw_iterate_open(guppiraw_iterate_info_t* gr_iterate) {
   if(gr_iterate->fd > 0) {
     close(gr_iterate->fd);
@@ -163,12 +190,20 @@ int _guppiraw_iterate_open(guppiraw_iterate_info_t* gr_iterate) {
   gr_iterate->fd = open(filepath, O_RDONLY);
   free(filepath);
   if(gr_iterate->fd <= 0) {
-    return 1;
+    return 3;
   }
   gr_iterate->block_index = 0;
   return guppiraw_skim_file(gr_iterate->fd, &gr_iterate->file_info);
 }
 
+/*
+ * Returns:
+ *  -X: `read(...)` returned 0 before `GUPPI_RAW_HEADER_END_STR` for Block X
+ *  0 : Successfully parsed the first and skimmed all the other headers in the file
+ *  2 : First Header is inappropriate (missing `BLOCSIZE`)
+ *  3 : Could not open the file `"%s.%04d.raw": gr_iterate->stempath, gr_iterate->fileenum`
+ *  X : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES` for Block X
+ */
 int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr_iterate) {
   gr_iterate->stempath_len = strlen(filepath);
 
