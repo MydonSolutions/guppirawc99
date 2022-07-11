@@ -99,14 +99,14 @@ int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
 int guppiraw_skim_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
 int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo);
 
-static inline off_t directio_align_value(off_t value) {
+static inline off_t guppiraw_directio_align_value(off_t value) {
   return (value + 511) & ~((off_t)511);
 }
 
 static inline int guppiraw_seek_next_block(int fd, guppiraw_block_info_t* gr_blockinfo) {
   return lseek(
     fd,
-    gr_blockinfo->directio == 1 ? directio_align_value(gr_blockinfo->file_data_pos + gr_blockinfo->datashape.block_size) : gr_blockinfo->file_data_pos + gr_blockinfo->datashape.block_size,
+    gr_blockinfo->directio == 1 ? guppiraw_directio_align_value(gr_blockinfo->file_data_pos + gr_blockinfo->datashape.block_size) : gr_blockinfo->file_data_pos + gr_blockinfo->datashape.block_size,
     0
   );
 }

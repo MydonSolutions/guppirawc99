@@ -69,7 +69,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
   if(gr_blockinfo != NULL) {
     gr_blockinfo->file_data_pos = data_start_pos;
     if(gr_blockinfo->directio == 1) {
-      gr_blockinfo->file_data_pos = directio_align_value(gr_blockinfo->file_data_pos);
+      gr_blockinfo->file_data_pos = guppiraw_directio_align_value(gr_blockinfo->file_data_pos);
     }
   }
   return 0;
@@ -125,7 +125,7 @@ int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
     return rv;
   }
   guppiraw_seek_next_block(fd, ptr_blockinfo);
-  size_t bytesize_first_block = ptr_blockinfo->file_data_pos + directio_align_value(ptr_blockinfo->datashape.block_size);
+  size_t bytesize_first_block = ptr_blockinfo->file_data_pos + guppiraw_directio_align_value(ptr_blockinfo->datashape.block_size);
   gr_fileinfo->n_blocks = (gr_fileinfo->bytesize_file + bytesize_first_block-1)/bytesize_first_block;
 
   gr_fileinfo->file_header_pos = malloc(gr_fileinfo->n_blocks * sizeof(off_t));
