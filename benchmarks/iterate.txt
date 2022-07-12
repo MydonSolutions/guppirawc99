@@ -1,101 +1,138 @@
-Iteration (x2 full bands): block #0[c=0,t=0] time=16384/16384, chan=4096/4096...iterations: 2 / 0.177779 s (3.019878 GB/s)
-Iteration (x4 full bands): block #2[c=0,t=0] time=8192/16384, chan=4096/4096...iterations: 4 / 0.176030 s (3.049883 GB/s)
-Iteration (x8 full bands): block #4[c=0,t=0] time=4096/16384, chan=4096/4096...iterations: 8 / 0.179314 s (2.994027 GB/s)
-Iteration (x16 full bands): block #6[c=0,t=0] time=2048/16384, chan=4096/4096...iterations: 16 / 0.197401 s (2.719697 GB/s)
-Iteration (x32 full bands): block #8[c=0,t=0] time=1024/16384, chan=4096/4096...iterations: 32 / 0.195325 s (2.748603 GB/s)
-Iteration (x2 full bands): block #10[c=0,t=0] time=16384/16384, chan=2048/4096...iterations: 4 / 0.165872 s (3.236658 GB/s)
-Iteration (x4 full bands): block #12[c=0,t=0] time=8192/16384, chan=2048/4096...iterations: 8 / 0.150311 s (3.571734 GB/s)
-Iteration (x8 full bands): block #14[c=0,t=0] time=4096/16384, chan=2048/4096...iterations: 16 / 0.171153 s (3.136789 GB/s)
-Iteration (x16 full bands): block #16[c=0,t=0] time=2048/16384, chan=2048/4096...iterations: 32 / 0.160603 s (3.342845 GB/s)
-Iteration (x32 full bands): block #18[c=0,t=0] time=1024/16384, chan=2048/4096...iterations: 64 / 0.155549 s (3.451458 GB/s)
-Iteration (x2 full bands): block #20[c=0,t=0] time=16384/16384, chan=1024/4096...iterations: 8 / 0.141046 s (3.806353 GB/s)
-Iteration (x4 full bands): block #22[c=0,t=0] time=8192/16384, chan=1024/4096...iterations: 16 / 0.158842 s (3.379905 GB/s)
-Iteration (x8 full bands): block #24[c=0,t=0] time=4096/16384, chan=1024/4096...iterations: 32 / 0.136254 s (3.940221 GB/s)
-Iteration (x16 full bands): block #26[c=0,t=0] time=2048/16384, chan=1024/4096...iterations: 64 / 0.133981 s (4.007068 GB/s)
-Iteration (x32 full bands): block #28[c=0,t=0] time=1024/16384, chan=1024/4096...iterations: 128 / 0.163113 s (3.291405 GB/s)
-Iteration (x2 full bands): block #30[c=0,t=0] time=16384/16384, chan=512/4096...iterations: 16 / 0.146011 s (3.676921 GB/s)
-Iteration (x4 full bands): block #32[c=0,t=0] time=8192/16384, chan=512/4096...iterations: 32 / 0.110995 s (4.836893 GB/s)
-Iteration (x8 full bands): block #34[c=0,t=0] time=4096/16384, chan=512/4096...iterations: 64 / 0.110513 s (4.857989 GB/s)
-Iteration (x16 full bands): block #36[c=0,t=0] time=2048/16384, chan=512/4096...iterations: 128 / 0.130125 s (4.125809 GB/s)
-Iteration (x32 full bands): block #38[c=0,t=0] time=1024/16384, chan=512/4096...iterations: 256 / 0.147295 s (3.644869 GB/s)
-Iteration (x2 full bands): block #40[c=0,t=0] time=16384/16384, chan=256/4096...iterations: 32 / 0.097109 s (5.528539 GB/s)
-Iteration (x4 full bands): block #42[c=0,t=0] time=8192/16384, chan=256/4096...iterations: 64 / 0.093144 s (5.763881 GB/s)
-Iteration (x8 full bands): block #44[c=0,t=0] time=4096/16384, chan=256/4096...iterations: 128 / 0.106676 s (5.032724 GB/s)
-Iteration (x16 full bands): block #46[c=0,t=0] time=2048/16384, chan=256/4096...iterations: 256 / 0.119524 s (4.491742 GB/s)
-Iteration (x32 full bands): block #48[c=0,t=0] time=1024/16384, chan=256/4096...iterations: 512 / 0.173371 s (3.096659 GB/s)
-Iteration (x2 full bands): block #50[c=0,t=0] time=32768/16384, chan=4096/4096...iterations: 2 / 0.273682 s (3.923319 GB/s)
-Iteration (x2 full bands): block #54[c=0,t=0] time=49152/16384, chan=4096/4096...iterations: 2 / 0.399332 s (4.033267 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=16384/16384, chan=4096/4096...iterations: 2 / 0.124043 s (4.328103 GB/s)
+Iteration (x4 full bands): block #2[c=0,t=0] time=8192/16384, chan=4096/4096...iterations: 4 / 0.128494 s (4.178179 GB/s)
+Iteration (x8 full bands): block #4[c=0,t=0] time=4096/16384, chan=4096/4096...iterations: 8 / 0.133418 s (4.023977 GB/s)
+Iteration (x16 full bands): block #6[c=0,t=0] time=2048/16384, chan=4096/4096...iterations: 16 / 0.149914 s (3.581193 GB/s)
+Iteration (x32 full bands): block #8[c=0,t=0] time=1024/16384, chan=4096/4096...iterations: 32 / 0.162646 s (3.300855 GB/s)
+Iteration (x2 full bands): block #10[c=0,t=0] time=16384/16384, chan=2048/4096...iterations: 4 / 0.101192 s (5.305468 GB/s)
+Iteration (x4 full bands): block #12[c=0,t=0] time=8192/16384, chan=2048/4096...iterations: 8 / 0.099435 s (5.399215 GB/s)
+Iteration (x8 full bands): block #14[c=0,t=0] time=4096/16384, chan=2048/4096...iterations: 16 / 0.105243 s (5.101251 GB/s)
+Iteration (x16 full bands): block #16[c=0,t=0] time=2048/16384, chan=2048/4096...iterations: 32 / 0.115728 s (4.639075 GB/s)
+Iteration (x32 full bands): block #18[c=0,t=0] time=1024/16384, chan=2048/4096...iterations: 64 / 0.126685 s (4.237841 GB/s)
+Iteration (x2 full bands): block #20[c=0,t=0] time=16384/16384, chan=1024/4096...iterations: 8 / 0.087553 s (6.131953 GB/s)
+Iteration (x4 full bands): block #22[c=0,t=0] time=8192/16384, chan=1024/4096...iterations: 16 / 0.088908 s (6.038499 GB/s)
+Iteration (x8 full bands): block #24[c=0,t=0] time=4096/16384, chan=1024/4096...iterations: 32 / 0.090312 s (5.944624 GB/s)
+Iteration (x16 full bands): block #26[c=0,t=0] time=2048/16384, chan=1024/4096...iterations: 64 / 0.103742 s (5.175058 GB/s)
+Iteration (x32 full bands): block #28[c=0,t=0] time=1024/16384, chan=1024/4096...iterations: 128 / 0.120710 s (4.447609 GB/s)
+Iteration (x2 full bands): block #30[c=0,t=0] time=16384/16384, chan=512/4096...iterations: 16 / 0.081948 s (6.551361 GB/s)
+Iteration (x4 full bands): block #32[c=0,t=0] time=8192/16384, chan=512/4096...iterations: 32 / 0.075075 s (7.151128 GB/s)
+Iteration (x8 full bands): block #34[c=0,t=0] time=4096/16384, chan=512/4096...iterations: 64 / 0.074837 s (7.173870 GB/s)
+Iteration (x16 full bands): block #36[c=0,t=0] time=2048/16384, chan=512/4096...iterations: 128 / 0.104626 s (5.131334 GB/s)
+Iteration (x32 full bands): block #38[c=0,t=0] time=1024/16384, chan=512/4096...iterations: 256 / 0.164022 s (3.273164 GB/s)
+Iteration (x2 full bands): block #40[c=0,t=0] time=16384/16384, chan=256/4096...iterations: 32 / 0.086857 s (6.181090 GB/s)
+Iteration (x4 full bands): block #42[c=0,t=0] time=8192/16384, chan=256/4096...iterations: 64 / 0.085949 s (6.246389 GB/s)
+Iteration (x8 full bands): block #44[c=0,t=0] time=4096/16384, chan=256/4096...iterations: 128 / 0.101928 s (5.267158 GB/s)
+Iteration (x16 full bands): block #46[c=0,t=0] time=2048/16384, chan=256/4096...iterations: 256 / 0.118269 s (4.539405 GB/s)
+Iteration (x32 full bands): block #48[c=0,t=0] time=1024/16384, chan=256/4096...iterations: 512 / 0.154287 s (3.479690 GB/s)
+Iteration (x2 full bands): block #50[c=0,t=0] time=32768/16384, chan=4096/4096...iterations: 2 / 0.278620 s (3.853786 GB/s)
+Iteration (x2 full bands): block #54[c=0,t=0] time=49152/16384, chan=4096/4096...iterations: 2 / 0.406292 s (3.964175 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=65536/16384, chan=4096/4096...iterations: 2 / 0.521765 s (4.115806 GB/s)
-Iteration (x2 full bands): block #8[c=0,t=0] time=81920/16384, chan=4096/4096...iterations: 2 / 0.648783 s (4.137523 GB/s)
-Iteration (x2 full bands): block #18[c=0,t=0] time=114688/16384, chan=4096/4096...iterations: 2 / 0.919419 s (4.087469 GB/s)
-Iteration (x2 full bands): block #32[c=0,t=0] time=131072/16384, chan=4096/4096...iterations: 2 / 1.128339 s (3.806451 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=65536/16384, chan=4096/4096...iterations: 2 / 0.538257 s (3.989699 GB/s)
+Iteration (x2 full bands): block #8[c=0,t=0] time=81920/16384, chan=4096/4096...iterations: 2 / 0.614246 s (4.370162 GB/s)
+Iteration (x2 full bands): block #18[c=0,t=0] time=114688/16384, chan=4096/4096...iterations: 2 / 0.870517 s (4.317086 GB/s)
+Iteration (x2 full bands): block #32[c=0,t=0] time=131072/16384, chan=4096/4096...iterations: 2 / 1.109993 s (3.869364 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=180224/16384, chan=4096/4096...iterations: 2 / 1.474536 s (4.005043 GB/s)
-Iteration (x2 full bands): block #22[c=0,t=0] time=212992/16384, chan=4096/4096...iterations: 2 / 1.794824 s (3.888583 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=180224/16384, chan=4096/4096...iterations: 2 / 1.527443 s (3.866318 GB/s)
+Iteration (x2 full bands): block #22[c=0,t=0] time=212992/16384, chan=4096/4096...iterations: 2 / 1.860422 s (3.751472 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=262144/16384, chan=4096/4096...iterations: 2 / 2.200433 s (3.903747 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=262144/16384, chan=4096/4096...iterations: 2 / 2.356614 s (3.645032 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=278528/16384, chan=4096/4096...iterations: 2 / 2.314728 s (3.942928 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=278528/16384, chan=4096/4096...iterations: 2 / 2.464045 s (3.703993 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=311296/16384, chan=4096/4096...iterations: 2 / 2.638212 s (3.866462 GB/s)
-Iteration (x2 full bands): block #38[c=0,t=0] time=32768/16384, chan=2048/4096...iterations: 4 / 0.216714 s (4.954649 GB/s)
-Iteration (x2 full bands): block #42[c=0,t=0] time=49152/16384, chan=2048/4096...iterations: 4 / 0.331326 s (4.861112 GB/s)
-Iteration (x2 full bands): block #48[c=0,t=0] time=65536/16384, chan=2048/4096...iterations: 4 / 0.472422 s (4.545689 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=311296/16384, chan=4096/4096...iterations: 2 / 2.777977 s (3.671934 GB/s)
+Iteration (x2 full bands): block #38[c=0,t=0] time=32768/16384, chan=2048/4096...iterations: 4 / 0.230504 s (4.658235 GB/s)
+Iteration (x2 full bands): block #42[c=0,t=0] time=49152/16384, chan=2048/4096...iterations: 4 / 0.340453 s (4.730793 GB/s)
+Iteration (x2 full bands): block #48[c=0,t=0] time=65536/16384, chan=2048/4096...iterations: 4 / 0.456468 s (4.704566 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=81920/16384, chan=2048/4096...iterations: 4 / 0.543630 s (4.937834 GB/s)
-Iteration (x2 full bands): block #10[c=0,t=0] time=114688/16384, chan=2048/4096...iterations: 4 / 0.758776 s (4.952840 GB/s)
-Iteration (x2 full bands): block #24[c=0,t=0] time=131072/16384, chan=2048/4096...iterations: 4 / 0.860698 s (4.990098 GB/s)
-Iteration (x2 full bands): block #40[c=0,t=0] time=180224/16384, chan=2048/4096...iterations: 4 / 1.202973 s (4.909154 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=81920/16384, chan=2048/4096...iterations: 4 / 0.556180 s (4.826413 GB/s)
+Iteration (x2 full bands): block #10[c=0,t=0] time=114688/16384, chan=2048/4096...iterations: 4 / 0.695452 s (5.403819 GB/s)
+Iteration (x2 full bands): block #24[c=0,t=0] time=131072/16384, chan=2048/4096...iterations: 4 / 0.813388 s (5.280343 GB/s)
+Iteration (x2 full bands): block #40[c=0,t=0] time=180224/16384, chan=2048/4096...iterations: 4 / 1.249297 s (4.727123 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=212992/16384, chan=2048/4096...iterations: 4 / 1.397427 s (4.994409 GB/s)
-Iteration (x2 full bands): block #26[c=0,t=0] time=262144/16384, chan=2048/4096...iterations: 4 / 1.709496 s (5.024835 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=212992/16384, chan=2048/4096...iterations: 4 / 1.348205 s (5.176751 GB/s)
+Iteration (x2 full bands): block #26[c=0,t=0] time=262144/16384, chan=2048/4096...iterations: 4 / 1.815937 s (4.730304 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=278528/16384, chan=2048/4096...iterations: 4 / 1.814111 s (5.031007 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=278528/16384, chan=2048/4096...iterations: 4 / 1.889163 s (4.831137 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=311296/16384, chan=2048/4096...iterations: 4 / 2.034918 s (5.012756 GB/s)
-Iteration (x2 full bands): block #38[c=0,t=0] time=32768/16384, chan=1024/4096...iterations: 8 / 0.194132 s (5.530988 GB/s)
-Iteration (x2 full bands): block #42[c=0,t=0] time=49152/16384, chan=1024/4096...iterations: 8 / 0.297963 s (5.405412 GB/s)
-Iteration (x2 full bands): block #48[c=0,t=0] time=65536/16384, chan=1024/4096...iterations: 8 / 0.389821 s (5.508897 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=311296/16384, chan=2048/4096...iterations: 4 / 2.114626 s (4.823807 GB/s)
+Iteration (x2 full bands): block #38[c=0,t=0] time=32768/16384, chan=1024/4096...iterations: 8 / 0.208367 s (5.153128 GB/s)
+Iteration (x2 full bands): block #42[c=0,t=0] time=49152/16384, chan=1024/4096...iterations: 8 / 0.308636 s (5.218486 GB/s)
+Iteration (x2 full bands): block #48[c=0,t=0] time=65536/16384, chan=1024/4096...iterations: 8 / 0.410526 s (5.231054 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=81920/16384, chan=1024/4096...iterations: 8 / 0.481566 s (5.574219 GB/s)
-Iteration (x2 full bands): block #10[c=0,t=0] time=114688/16384, chan=1024/4096...iterations: 8 / 0.685187 s (5.484775 GB/s)
-Iteration (x2 full bands): block #24[c=0,t=0] time=131072/16384, chan=1024/4096...iterations: 8 / 0.777859 s (5.521524 GB/s)
-Iteration (x2 full bands): block #40[c=0,t=0] time=180224/16384, chan=1024/4096...iterations: 8 / 1.072440 s (5.506676 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=81920/16384, chan=1024/4096...iterations: 8 / 0.496522 s (5.406315 GB/s)
+Iteration (x2 full bands): block #10[c=0,t=0] time=114688/16384, chan=1024/4096...iterations: 8 / 0.616944 s (6.091471 GB/s)
+Iteration (x2 full bands): block #24[c=0,t=0] time=131072/16384, chan=1024/4096...iterations: 8 / 0.725114 s (5.923161 GB/s)
+Iteration (x2 full bands): block #40[c=0,t=0] time=180224/16384, chan=1024/4096...iterations: 8 / 1.129788 s (5.227158 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=212992/16384, chan=1024/4096...iterations: 8 / 1.250202 s (5.582555 GB/s)
-Iteration (x2 full bands): block #26[c=0,t=0] time=262144/16384, chan=1024/4096...iterations: 8 / 1.548584 s (5.546961 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=212992/16384, chan=1024/4096...iterations: 8 / 1.197109 s (5.830147 GB/s)
+Iteration (x2 full bands): block #26[c=0,t=0] time=262144/16384, chan=1024/4096...iterations: 8 / 1.562207 s (5.498589 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=278528/16384, chan=1024/4096...iterations: 8 / 1.629689 s (5.600336 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=278528/16384, chan=1024/4096...iterations: 8 / 1.551380 s (5.883024 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=311296/16384, chan=1024/4096...iterations: 8 / 1.819582 s (5.605984 GB/s)
-Iteration (x2 full bands): block #38[c=0,t=0] time=32768/16384, chan=512/4096...iterations: 16 / 0.181594 s (5.912871 GB/s)
-Iteration (x2 full bands): block #42[c=0,t=0] time=49152/16384, chan=512/4096...iterations: 16 / 0.277622 s (5.801459 GB/s)
-Iteration (x2 full bands): block #48[c=0,t=0] time=65536/16384, chan=512/4096...iterations: 16 / 0.363358 s (5.910104 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=311296/16384, chan=1024/4096...iterations: 8 / 1.740172 s (5.861804 GB/s)
+Iteration (x2 full bands): block #38[c=0,t=0] time=32768/16384, chan=512/4096...iterations: 16 / 0.197010 s (5.450189 GB/s)
+Iteration (x2 full bands): block #42[c=0,t=0] time=49152/16384, chan=512/4096...iterations: 16 / 0.292443 s (5.507442 GB/s)
+Iteration (x2 full bands): block #48[c=0,t=0] time=65536/16384, chan=512/4096...iterations: 16 / 0.388742 s (5.524187 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=81920/16384, chan=512/4096...iterations: 16 / 0.449016 s (5.978305 GB/s)
-Iteration (x2 full bands): block #10[c=0,t=0] time=114688/16384, chan=512/4096...iterations: 16 / 0.641077 s (5.862161 GB/s)
-Iteration (x2 full bands): block #24[c=0,t=0] time=131072/16384, chan=512/4096...iterations: 16 / 0.726822 s (5.909242 GB/s)
-Iteration (x2 full bands): block #40[c=0,t=0] time=180224/16384, chan=512/4096...iterations: 16 / 0.993853 s (5.942106 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=81920/16384, chan=512/4096...iterations: 16 / 0.467686 s (5.739651 GB/s)
+Iteration (x2 full bands): block #10[c=0,t=0] time=114688/16384, chan=512/4096...iterations: 16 / 0.577252 s (6.510322 GB/s)
+Iteration (x2 full bands): block #24[c=0,t=0] time=131072/16384, chan=512/4096...iterations: 16 / 0.681285 s (6.304215 GB/s)
+Iteration (x2 full bands): block #40[c=0,t=0] time=180224/16384, chan=512/4096...iterations: 16 / 1.066574 s (5.536962 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=212992/16384, chan=512/4096...iterations: 16 / 1.179378 s (5.917799 GB/s)
-Iteration (x2 full bands): block #26[c=0,t=0] time=262144/16384, chan=512/4096...iterations: 16 / 1.447642 s (5.933742 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=212992/16384, chan=512/4096...iterations: 16 / 1.127068 s (6.192459 GB/s)
+Iteration (x2 full bands): block #26[c=0,t=0] time=262144/16384, chan=512/4096...iterations: 16 / 1.472327 s (5.834257 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=278528/16384, chan=512/4096...iterations: 16 / 1.533738 s (5.950694 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=278528/16384, chan=512/4096...iterations: 16 / 1.460312 s (6.249901 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=311296/16384, chan=512/4096...iterations: 16 / 1.721472 s (5.925480 GB/s)
-Iteration (x2 full bands): block #38[c=0,t=0] time=32768/16384, chan=256/4096...iterations: 32 / 0.169968 s (6.317318 GB/s)
-Iteration (x2 full bands): block #42[c=0,t=0] time=49152/16384, chan=256/4096...iterations: 32 / 0.266414 s (6.045526 GB/s)
-Iteration (x2 full bands): block #48[c=0,t=0] time=65536/16384, chan=256/4096...iterations: 32 / 0.348608 s (6.160167 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=311296/16384, chan=512/4096...iterations: 16 / 1.629640 s (6.259387 GB/s)
+Iteration (x2 full bands): block #38[c=0,t=0] time=32768/16384, chan=256/4096...iterations: 32 / 0.187492 s (5.726867 GB/s)
+Iteration (x2 full bands): block #42[c=0,t=0] time=49152/16384, chan=256/4096...iterations: 32 / 0.282028 s (5.710826 GB/s)
+Iteration (x2 full bands): block #48[c=0,t=0] time=65536/16384, chan=256/4096...iterations: 32 / 0.377656 s (5.686349 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=81920/16384, chan=256/4096...iterations: 32 / 0.430711 s (6.232380 GB/s)
-Iteration (x2 full bands): block #10[c=0,t=0] time=114688/16384, chan=256/4096...iterations: 32 / 0.616212 s (6.098707 GB/s)
-Iteration (x2 full bands): block #24[c=0,t=0] time=131072/16384, chan=256/4096...iterations: 32 / 0.697988 s (6.153354 GB/s)
-Iteration (x2 full bands): block #40[c=0,t=0] time=180224/16384, chan=256/4096...iterations: 32 / 0.957457 s (6.167985 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=81920/16384, chan=256/4096...iterations: 32 / 0.452095 s (5.937590 GB/s)
+Iteration (x2 full bands): block #10[c=0,t=0] time=114688/16384, chan=256/4096...iterations: 32 / 0.555060 s (6.770613 GB/s)
+Iteration (x2 full bands): block #24[c=0,t=0] time=131072/16384, chan=256/4096...iterations: 32 / 0.656113 s (6.546079 GB/s)
+Iteration (x2 full bands): block #40[c=0,t=0] time=180224/16384, chan=256/4096...iterations: 32 / 1.032413 s (5.720172 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=212992/16384, chan=256/4096...iterations: 32 / 1.128314 s (6.185620 GB/s)
-Iteration (x2 full bands): block #26[c=0,t=0] time=262144/16384, chan=256/4096...iterations: 32 / 1.394333 s (6.160605 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=212992/16384, chan=256/4096...iterations: 32 / 1.088503 s (6.411854 GB/s)
+Iteration (x2 full bands): block #26[c=0,t=0] time=262144/16384, chan=256/4096...iterations: 32 / 1.423078 s (6.036166 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=278528/16384, chan=256/4096...iterations: 32 / 1.480919 s (6.162934 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=278528/16384, chan=256/4096...iterations: 32 / 1.402738 s (6.506422 GB/s)
 Resetting iterations to beginning of file!
-Iteration (x2 full bands): block #0[c=0,t=0] time=311296/16384, chan=256/4096...iterations: 32 / 1.651700 s (6.175787 GB/s)
+Iteration (x2 full bands): block #0[c=0,t=0] time=311296/16384, chan=256/4096...iterations: 32 / 1.570347 s (6.495728 GB/s)
+Architecture:                    x86_64
+CPU op-mode(s):                  32-bit, 64-bit
+Byte Order:                      Little Endian
+Address sizes:                   43 bits physical, 48 bits virtual
+CPU(s):                          48
+On-line CPU(s) list:             0-47
+Thread(s) per core:              1
+Core(s) per socket:              24
+Socket(s):                       2
+NUMA node(s):                    2
+Vendor ID:                       AuthenticAMD
+CPU family:                      23
+Model:                           49
+Model name:                      AMD EPYC 7352 24-Core Processor
+Stepping:                        0
+Frequency boost:                 enabled
+CPU MHz:                         3076.299
+CPU max MHz:                     2300.0000
+CPU min MHz:                     1500.0000
+BogoMIPS:                        4600.42
+Virtualization:                  AMD-V
+L1d cache:                       1.5 MiB
+L1i cache:                       1.5 MiB
+L2 cache:                        24 MiB
+L3 cache:                        256 MiB
+NUMA node0 CPU(s):               0-23
+NUMA node1 CPU(s):               24-47
+Vulnerability Itlb multihit:     Not affected
+Vulnerability L1tf:              Not affected
+Vulnerability Mds:               Not affected
+Vulnerability Meltdown:          Not affected
+Vulnerability Spec store bypass: Mitigation; Speculative Store Bypass disabled via prctl and seccomp
+Vulnerability Spectre v1:        Mitigation; usercopy/swapgs barriers and __user pointer sanitization
+Vulnerability Spectre v2:        Mitigation; Retpolines, IBPB conditional, IBRS_FW, STIBP disabled, RSB filling
+Vulnerability Srbds:             Not affected
+Vulnerability Tsx async abort:   Not affected
+Flags:                           fpu vme de pse tsc msr pae mce cx8 apic sep mtrr pge mca cmov pat pse36 clflush mmx fxsr sse sse2 ht syscall nx mmxext fxsr_opt pdpe1gb rdtscp lm constant_tsc rep_good nopl nonstop_tsc cpuid extd_apicid aperfmperf pni pclmulqdq monitor ssse3 fma cx16 sse4_1 sse4_2 x2apic movbe popcnt aes xsave avx f16c rdrand lahf_lm cmp_legacy svm extapic cr8_legacy abm sse4a misalignsse 3dnowprefetch osvw ibs skinit wdt tce topoext perfctr_core perfctr_nb bpext perfctr_llc mwaitx cpb cat_l3 cdp_l3 hw_pstate sme ssbd mba sev ibrs ibpb stibp vmmcall fsgsbase bmi1 avx2 smep bmi2 cqm rdt_a rdseed adx smap clflushopt clwb sha_ni xsaveopt xsavec xgetbv1 xsaves cqm_llc cqm_occup_llc cqm_mbm_total cqm_mbm_local clzero irperf xsaveerptr wbnoinvd arat npt lbrv svm_lock nrip_save tsc_scale vmcb_clean flushbyasid decodeassists pausefilter pfthreshold avic v_vmsave_vmload vgif umip rdpid overflow_recov succor smca
