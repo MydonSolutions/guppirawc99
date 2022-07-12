@@ -245,7 +245,7 @@ typedef struct {
   struct iovec* iovecs;
   int iovec_count;
   off_t fd_offset;
-} iovecs_offset_t;
+} preadv_parameters_t;
 
 static inline long _guppiraw_read_time_span(
   const guppiraw_iterate_info_t* gr_iterate,
@@ -255,60 +255,90 @@ static inline long _guppiraw_read_time_span(
   void* buffer
 ) {
   const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.metadata.datashape;
+  if(time <= datashape->n_time) {
+    // should never happen
+    fprintf(
+      stderr,
+      "_guppiraw_read_time_span exclusively for reading across blocks!\n"
+    );
+    exit(1);
+  }
   
   const size_t chan_steps = chan/chan_step;
   const size_t time_steps = time/time_step;
 
   long bytes_read = 0;
-  
-  const int file_blocks_spanned = (gr_iterate->time_index + time + datashape->n_time-1)/datashape->n_time;
-  iovecs_offset_t* iovecs = malloc(file_blocks_spanned * sizeof(iovecs_offset_t));
 
-  // First block iovec_count calculation
-  const size_t first_block_read_time_span = time < datashape->n_time ? time : datashape->n_time - gr_iterate->time_index;
-  iovecs[0].iovec_count = (first_block_read_time_span/time_step) * (chan_steps);
+  const long max_iovecs = sysconf(_SC_IOV_MAX);
+  preadv_parameters_t pread_params = {0};
+  pread_params.iovecs = malloc(max_iovecs * sizeof(struct iovec));
 
-  if(file_blocks_spanned > 1) {
-    // First block iovec_count calculation
-    // Nearest lower multiple of NTIME
-    const size_t last_block_read_time_span = ((gr_iterate->time_index + time-1) % datashape->n_time)+1;
-    iovecs[file_blocks_spanned-1].iovec_count = (last_block_read_time_span/time_step) * (chan_steps);
-  }
-
-  for(int iov_i = 0; iov_i < file_blocks_spanned; iov_i++) {
-    if(iov_i > 0 && iov_i < file_blocks_spanned-1) {
-      // Middle block iovec_count for >=3 block-span reads are full
-      iovecs[iov_i].iovec_count = (datashape->n_time/time_step) * (chan_steps);
-    }
-    iovecs[iov_i].iovecs = malloc(iovecs[iov_i].iovec_count*sizeof(struct iovec));
-    // iovec_fd offset
-    iovecs[iov_i].fd_offset = gr_iterate->file_info.file_data_pos[gr_iterate->block_index + iov_i];
-    iovecs[iov_i].fd_offset += gr_iterate->chan_index * datashape->bytestride_frequency;
-    iovecs[iov_i].fd_offset += (iov_i == 0 ? gr_iterate->time_index : 0)*datashape->bytestride_time;
-  }
-
-  // Set destination addresses for all iov_ops
-  int* iovecbatch_local_idx = malloc(file_blocks_spanned*sizeof(int));
-  memset(iovecbatch_local_idx, 0, file_blocks_spanned*sizeof(int));
-  for(size_t iovec_i = 0; iovec_i < time_steps * chan_steps; iovec_i++){
-    const size_t chan_i = iovec_i/time_steps; // slower
-    const size_t time_i = iovec_i%time_steps; // faster
+  for(size_t time_i = 0; time_i < time_steps; time_i++) {
     const size_t time_index = gr_iterate->time_index + time_i*time_step;
-    const int iovecbatch_i = time_index / datashape->n_time;
-    const int iovecbatch_local_i = iovecbatch_local_idx[iovecbatch_i];
+    
+    pread_params.fd_offset = gr_iterate->file_info.file_data_pos[
+      gr_iterate->block_index + time_index / datashape->n_time
+    ];
+    pread_params.fd_offset += gr_iterate->chan_index * datashape->bytestride_frequency;
+    for(size_t chan_i = 0; chan_i < chan_steps; chan_i++) {
+      pread_params.iovecs[pread_params.iovec_count].iov_len = read_size;
+      pread_params.iovecs[pread_params.iovec_count].iov_base = buffer + 
+        chan_i*chan_step_stride +
+        time_i*read_size;
 
-    iovecs[iovecbatch_i].iovecs[iovecbatch_local_i].iov_base = buffer + 
-          chan_i*chan_step_stride +
-          time_i*read_size;
-    iovecs[iovecbatch_i].iovecs[iovecbatch_local_i].iov_len = read_size;
-    iovecbatch_local_idx[iovecbatch_i]++;
-  }
-  free(iovecbatch_local_idx);
+      pread_params.iovec_count++;
+      if(pread_params.iovec_count == max_iovecs) {
+        const long bytes_preadv = preadv(
+          gr_iterate->fd,
+          pread_params.iovecs,
+          pread_params.iovec_count,
+          pread_params.fd_offset
+        );
+        if(bytes_preadv <= 0) {
+          fprintf(
+            stderr,
+            "preadv(..., %d, %ld) errored: %ld (fd:%d @ %ld)\n\t",
+            pread_params.iovec_count,
+            pread_params.fd_offset,
+            bytes_preadv,
+            gr_iterate->fd,
+            lseek(gr_iterate->fd, 0, SEEK_CUR)
+          );
+          perror("");
+        }
+        bytes_read += bytes_preadv;
 
-  for(int iov_i = 0; iov_i < file_blocks_spanned; iov_i++) {
-    bytes_read += preadv(gr_iterate->fd, iovecs[iov_i].iovecs, iovecs[iov_i].iovec_count, iovecs[iov_i].fd_offset);
-    free(iovecs[iov_i].iovecs);
+        pread_params.iovec_count = 0;
+        pread_params.fd_offset += read_size*max_iovecs;
+      }
+    }
+
+    // read any stragglers for this block, before fd_offset changes
+    if(pread_params.iovec_count > 0) {
+      const long bytes_preadv = preadv(
+        gr_iterate->fd,
+        pread_params.iovecs,
+        pread_params.iovec_count,
+        pread_params.fd_offset
+      );
+      if(bytes_preadv <= 0) {
+        fprintf(
+          stderr,
+          "preadv(..., %d, %ld) errored: %ld (fd:%d @ %ld)\n\t",
+          pread_params.iovec_count,
+          pread_params.fd_offset,
+          bytes_preadv,
+          gr_iterate->fd,
+          lseek(gr_iterate->fd, 0, SEEK_CUR)
+        );
+        perror("");
+      }
+      bytes_read += bytes_preadv;
+      pread_params.iovec_count = 0;
+    }
   }
+
+  free(pread_params.iovecs);
   return bytes_read;
 }
 
@@ -347,12 +377,24 @@ static inline long _guppiraw_read_time_gap(
   return bytes_read;
 }
 
+/*
+ * Returns:
+ *  -1: An error occurred, see stderr
+ *  0 : Could not open the subsequent file
+ *  X : Bytes read 
+ */
 long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t time, const size_t chan, void* buffer) {
   const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.metadata.datashape;
   if(gr_iterate->chan_index + chan > datashape->n_obschan) {
     // cannot gather in channel dimension
     fprintf(stderr, "Error: cannot gather in channel dimension.\n");
     return -1;
+  }
+  if(gr_iterate->block_index == gr_iterate->file_info.n_blocks) {
+    _guppiraw_iterate_open(gr_iterate);
+    if(gr_iterate->fd <= 0) {
+      return 0;
+    }
   }
   // check that time request is a factor of remaining file_ntime
   if(guppiraw_iterate_filentime_remaining(gr_iterate) < time) {
@@ -413,9 +455,6 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t tim
       }
       else {
         gr_iterate->block_index += time / datashape->n_time;
-      }
-      if(gr_iterate->block_index == gr_iterate->file_info.n_blocks) {
-        _guppiraw_iterate_open(gr_iterate);
       }
     }
 

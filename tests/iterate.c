@@ -48,15 +48,13 @@ size_t validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, siz
   char *iterate_buffer_ptr;
   for(size_t rt = 0; rt < repeat_time; rt++) {
     for(size_t rc = 0; rc < repeat_chan; rc++) {
-
-      if(
-        guppiraw_iterate_read(
-          gr_iterate,
-          ntime,
-          nchan,
-          iterate_buffer
-        ) == bytes_per_iter
-      ) {
+      const long bytes_read = guppiraw_iterate_read(
+        gr_iterate,
+        ntime,
+        nchan,
+        iterate_buffer
+      );
+      if(bytes_read == bytes_per_iter) {
         iterate_buffer_ptr = iterate_buffer;
         for (size_t c = 0; c < nchan; c++) {
           chan_offset = (chan_index + c + rc*nchan)*datashape->bytestride_frequency;
@@ -66,12 +64,34 @@ size_t validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, siz
             time_offset = (d_t%datashape->n_time)*datashape->bytestride_time + (d_t/datashape->n_time)*datashape->block_size;
 
             for (size_t b = 0; b < pol_sample_bytes; b++) {
-              if(data_blocks[chan_offset + time_offset + b] == *iterate_buffer_ptr++) {
+              if(data_blocks[chan_offset + time_offset + b] == *iterate_buffer_ptr) {
                 bytes_invalid--;
               }
+              // else {
+              //   fprintf(
+              //     stderr,
+              //     "data_blocks[c=%lu*%lu + [T=%lu,t_m=%lu]*%lu + b=%lu] != %d",
+              //     chan_index + c + rc*nchan,
+              //     datashape->bytestride_frequency,
+              //     d_t/datashape->n_time,
+              //     d_t%datashape->n_time,
+              //     datashape->bytestride_time,
+              //     b,
+              //     *iterate_buffer_ptr
+              //   );
+              // }
+              iterate_buffer_ptr++;
             }
           }
         }
+      }
+      else {
+        fprintf(
+          stderr,
+          "Iteration didn't read the correct number of bytes: %ld/%lu\n",
+          bytes_read, 
+          bytes_per_iter
+        );
       }
 
     }
@@ -181,7 +201,7 @@ int main(int argc, char const *argv[])
 
             if(bytes_invalid != 0){
               printf("failed (%lu/%lu bytes invalid).\n",
-                bytes_invalid, datashape->block_size
+                bytes_invalid, guppiraw_iterate_bytesize(&gr_iterate, ntime, nchan)
               );
               return 1;
             }
