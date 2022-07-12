@@ -1,6 +1,21 @@
 #include <stdlib.h>
 #include "guppiraw.h"
 
+typedef struct {
+	char obsid[72];
+	double chan_bw;
+} guppiraw_block_meta_t;
+
+const uint64_t KEY_UINT64_OBSID    = GUPPI_RAW_KEY_UINT64_ID_LE('O','B','S','I','D',' ',' ',' ');
+const uint64_t KEY_UINT64_CHAN_BW  = GUPPI_RAW_KEY_UINT64_ID_LE('C','H','A','N','_','B','W',' ');
+
+void guppiraw_parse_block_meta(const char* entry, void* block_meta) {
+  if(((uint64_t*)entry)[0] == KEY_UINT64_OBSID)
+    hgets(entry, "OBSID", 72, ((guppiraw_block_meta_t*)block_meta)->obsid);
+	else if(((uint64_t*)entry)[0] == KEY_UINT64_CHAN_BW)
+    hgetr8(entry, "CHAN_BW", &((guppiraw_block_meta_t*)block_meta)->chan_bw);
+}
+
 int main(int argc, char const *argv[])
 {
 	guppiraw_header_t header = {0};
@@ -16,24 +31,22 @@ int main(int argc, char const *argv[])
 
 	int rv = 0;
 
-	char obsid[72] = {0};
-	int obsnchan = -1;
-	double chan_bw = -1.0;
+	guppiraw_metadata_t metadata = {0};
+	metadata.user_data = malloc(sizeof(guppiraw_block_meta_t));
+	metadata.user_callback = guppiraw_parse_block_meta;
+	guppiraw_parse_blockheader_string(&metadata, header_string, -1);
+	const guppiraw_block_meta_t* user_metadata = (guppiraw_block_meta_t*)metadata.user_data;
 
-	hgets(header_string, "OBSID", 72, obsid);
-	hgeti4(header_string, "OBSNCHAN", &obsnchan);
-	hgetr8(header_string, "CHAN_BW", &chan_bw);
-
-	if(strncmp("Faux Observation", obsid, 16) != 0) {
-		fprintf(stderr, "OBSID != 'Faux Observation': '%s'\n", obsid);
+	if(strncmp("Faux Observation", user_metadata->obsid, 16) != 0) {
+		fprintf(stderr, "OBSID != 'Faux Observation': '%s'\n", user_metadata->obsid);
 		rv = 1;
 	}
-	else if(obsnchan != 1024) {
-		fprintf(stderr, "OBSNCHAN != 1024: %d\n", obsnchan);
+	else if(metadata.datashape.n_obschan != 1024) {
+		fprintf(stderr, "OBSNCHAN != 1024: %d\n", metadata.datashape.n_obschan);
 		rv = 1;
 	}
-	else if(chan_bw != 0.5) {
-		fprintf(stderr, "CHAN_BW != 0.5: %f\n", chan_bw);
+	else if(user_metadata->chan_bw != 0.5) {
+		fprintf(stderr, "CHAN_BW != 0.5: %f\n", user_metadata->chan_bw);
 		rv = 1;
 	}
 

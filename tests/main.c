@@ -15,7 +15,7 @@ void guppiraw_parse_block_meta(const char* entry, void* block_meta) {
     hgetr8(entry, "CHAN_BW", &((guppiraw_block_meta_t*)block_meta)->chan_bw);
     ((guppiraw_block_meta_t*)block_meta)->tbin = 1.0/((guppiraw_block_meta_t*)block_meta)->chan_bw;
   }
-  if(((uint64_t*)entry)[0] == KEY_UINT64_NANTS)
+  else if(((uint64_t*)entry)[0] == KEY_UINT64_NANTS)
     hgeti4(entry, "NANTS", &((guppiraw_block_meta_t*)block_meta)->nants);
 }
 

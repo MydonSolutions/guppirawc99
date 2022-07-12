@@ -91,6 +91,9 @@ typedef struct {
   off_t *file_data_pos;
 } guppiraw_file_info_t;
 
+// Negative `header_length` indicates no hard limit on `header_string` length
+void guppiraw_parse_blockheader_string(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length);
+
 /*
  * 
  *

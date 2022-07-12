@@ -25,9 +25,14 @@ static inline void _parse_entry(const char* entry, guppiraw_metadata_t* metadata
 
 void guppiraw_parse_blockheader_string(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length) {
   int32_t entry_count = 0;
-  while(header_length > 0 && (entry_count+1)*80 < header_length) {
+  while(
+    strncmp(header_string, GUPPI_RAW_HEADER_END_STR, 80) != 0 && 
+    ((entry_count+1)*80 < header_length || header_length < 0)
+  ) {
+    fprintf(stderr, "%d: %s\n", entry_count, header_string);
     _parse_entry(header_string, metadata);
     header_string += 80;
+    entry_count++;
   }
 }
 
