@@ -241,6 +241,77 @@ int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr
   return _guppiraw_iterate_open(gr_iterate);
 }
 
+typedef struct {
+  struct iovec* iovecs;
+  int iovec_count;
+  off_t fd_offset;
+} iovecs_offset_t;
+
+static inline long _guppiraw_read_time_span(
+  const guppiraw_iterate_info_t* gr_iterate,
+  const size_t time, const size_t time_step,
+  const size_t chan, const size_t chan_step,
+  const size_t read_size, const size_t chan_step_stride,
+  void* buffer
+) {
+  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.metadata.datashape;
+  
+  const size_t chan_steps = chan/chan_step;
+  const size_t time_steps = time/time_step;
+
+  long bytes_read = 0;
+  
+  const int file_blocks_spanned = (gr_iterate->time_index + time + datashape->n_time-1)/datashape->n_time;
+  iovecs_offset_t* iovecs = malloc(file_blocks_spanned * sizeof(iovecs_offset_t));
+
+  // First block iovec_count calculation
+  const size_t first_block_read_time_span = time < datashape->n_time ? time : datashape->n_time - gr_iterate->time_index;
+  iovecs[0].iovec_count = (first_block_read_time_span/time_step) * (chan_steps);
+
+  if(file_blocks_spanned > 1) {
+    // First block iovec_count calculation
+    // Nearest lower multiple of NTIME
+    const size_t last_block_read_time_span = ((gr_iterate->time_index + time-1) % datashape->n_time)+1;
+    iovecs[file_blocks_spanned-1].iovec_count = (last_block_read_time_span/time_step) * (chan_steps);
+  }
+
+  for(int iov_i = 0; iov_i < file_blocks_spanned; iov_i++) {
+    if(iov_i > 0 && iov_i < file_blocks_spanned-1) {
+      // Middle block iovec_count for >=3 block-span reads are full
+      iovecs[iov_i].iovec_count = (datashape->n_time/time_step) * (chan_steps);
+    }
+    iovecs[iov_i].iovecs = malloc(iovecs[iov_i].iovec_count*sizeof(struct iovec));
+    // iovec_fd offset
+    iovecs[iov_i].fd_offset = gr_iterate->file_info.file_data_pos[gr_iterate->block_index + iov_i];
+    iovecs[iov_i].fd_offset += gr_iterate->chan_index * datashape->bytestride_frequency;
+    iovecs[iov_i].fd_offset += (iov_i == 0 ? gr_iterate->time_index : 0)*datashape->bytestride_time;
+  }
+
+  // Set destination addresses for all iov_ops
+  int* iovecbatch_local_idx = malloc(file_blocks_spanned*sizeof(int));
+  memset(iovecbatch_local_idx, 0, file_blocks_spanned*sizeof(int));
+  for(size_t iovec_i = 0; iovec_i < time_steps * chan_steps; iovec_i++){
+    const size_t chan_i = iovec_i/time_steps; // slower
+    const size_t time_i = iovec_i%time_steps; // faster
+    const size_t time_index = gr_iterate->time_index + time_i*time_step;
+    const int iovecbatch_i = time_index / datashape->n_time;
+    const int iovecbatch_local_i = iovecbatch_local_idx[iovecbatch_i];
+
+    iovecs[iovecbatch_i].iovecs[iovecbatch_local_i].iov_base = buffer + 
+          chan_i*chan_step_stride +
+          time_i*read_size;
+    iovecs[iovecbatch_i].iovecs[iovecbatch_local_i].iov_len = read_size;
+    iovecbatch_local_idx[iovecbatch_i]++;
+  }
+  free(iovecbatch_local_idx);
+
+  for(int iov_i = 0; iov_i < file_blocks_spanned; iov_i++) {
+    bytes_read += preadv(gr_iterate->fd, iovecs[iov_i].iovecs, iovecs[iov_i].iovec_count, iovecs[iov_i].fd_offset);
+    free(iovecs[iov_i].iovecs);
+  }
+  return bytes_read;
+}
+
 static inline long _guppiraw_read_time_gap(
   const guppiraw_iterate_info_t* gr_iterate,
   const size_t time, const size_t time_step,
@@ -312,13 +383,24 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t tim
       const size_t read_size = guppiraw_iterate_bytesize(gr_iterate, time_step, chan_step);
       const size_t chan_step_stride = guppiraw_iterate_bytesize(gr_iterate, time, 1);
 
-      bytes_read += _guppiraw_read_time_gap(
-        gr_iterate,
-        time, time_step,
-        chan, chan_step,
-        read_size, chan_step_stride,
-        buffer
-      );
+      if ((gr_iterate->time_index + time - 1)/datashape->n_time == 0) {
+        bytes_read += _guppiraw_read_time_gap(
+          gr_iterate,
+          time, time_step,
+          chan, chan_step,
+          read_size, chan_step_stride,
+          buffer
+        );
+      }
+      else {
+        bytes_read += _guppiraw_read_time_span(
+          gr_iterate,
+          time, time_step,
+          chan, chan_step,
+          read_size, chan_step_stride,
+          buffer
+        );
+      }
     }
   }
 
