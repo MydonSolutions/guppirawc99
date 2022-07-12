@@ -24,21 +24,22 @@ int main(int argc, char const *argv[])
 {
   if (argc > 1){
     guppiraw_block_info_t gr_blockinfo = {0};
-    gr_blockinfo.header_user_data = malloc(sizeof(guppiraw_block_meta_t));
-    gr_blockinfo.header_entry_callback = guppiraw_parse_block_meta;
+    guppiraw_metadata_t* metadata = &gr_blockinfo.metadata;
+    metadata->user_data = malloc(sizeof(guppiraw_block_meta_t));
+    metadata->user_callback = guppiraw_parse_block_meta;
 
     int raw_fd = open(argv[1], O_RDONLY);
     int block_id = 0;
     while(guppiraw_read_blockheader(raw_fd, &gr_blockinfo) == 0) {
       printf("\nblock #%d\n", block_id);
-      printf("\tblock_size: %lu\n", gr_blockinfo.datashape.block_size);
-      printf("\tdirectio: %d\n", gr_blockinfo.directio);
-      printf("\tn_obschan: %u\n", gr_blockinfo.datashape.n_obschan);
-      printf("\tn_pol: %u\n", gr_blockinfo.datashape.n_pol);
-      printf("\tn_bit: %u\n", gr_blockinfo.datashape.n_bit);
-      printf("\tn_time: %lu\n", gr_blockinfo.datashape.n_time);
-      printf("\tnants: %d\n", ((guppiraw_block_meta_t*)gr_blockinfo.header_user_data)->nants);
-      printf("\tchan_bw: %f\n", ((guppiraw_block_meta_t*)gr_blockinfo.header_user_data)->chan_bw);
+      printf("\tblock_size: %lu\n", metadata->datashape.block_size);
+      printf("\tdirectio: %d\n", metadata->directio);
+      printf("\tn_obschan: %u\n", metadata->datashape.n_obschan);
+      printf("\tn_pol: %u\n", metadata->datashape.n_pol);
+      printf("\tn_bit: %u\n", metadata->datashape.n_bit);
+      printf("\tn_time: %lu\n", metadata->datashape.n_time);
+      printf("\tnants: %d\n", ((guppiraw_block_meta_t*)metadata->user_data)->nants);
+      printf("\tchan_bw: %f\n", ((guppiraw_block_meta_t*)metadata->user_data)->chan_bw);
       block_id ++;
       guppiraw_seek_next_block(raw_fd, &gr_blockinfo);
     }

@@ -6,8 +6,24 @@ static const uint64_t KEY_NPOL      = GUPPI_RAW_KEY_UINT64_ID_LE('N','P','O','L'
 static const uint64_t KEY_NBITS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' ');
 static const uint64_t KEY_DIRECTIO  = GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O');
 
+static inline void _parse_entry(char* entry, guppiraw_metadata_t* metadata) {
+  if(((uint64_t*)entry)[0] == KEY_BLOCSIZE)
+    hgetu8(entry, "BLOCSIZE", &metadata->datashape.block_size);
+  else if(((uint64_t*)entry)[0] == KEY_OBSNCHAN)
+    hgetu4(entry, "OBSNCHAN", &metadata->datashape.n_obschan);
+  else if(((uint64_t*)entry)[0] == KEY_NPOL)
+    hgetu4(entry, "NPOL", &metadata->datashape.n_pol);
+  else if(((uint64_t*)entry)[0] == KEY_NBITS)
+    hgetu4(entry, "NBITS", &metadata->datashape.n_bit);
+  else if(((uint64_t*)entry)[0] == KEY_DIRECTIO)
+    hgeti4(entry, "DIRECTIO", &metadata->directio);
+
+  if(metadata->user_callback != 0) {
+    metadata->user_callback(entry, metadata->user_data);
+  }
+}
+
 /*
- * 
  *
  * Returns:
  *  -1: `read(...)` returned 0 before `GUPPI_RAW_HEADER_END_STR`
@@ -37,20 +53,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
     }
 
     if(gr_blockinfo != NULL && parse) {
-      if(((uint64_t*)entry)[0] == KEY_BLOCSIZE)
-        hgetu8(entry, "BLOCSIZE", &gr_blockinfo->datashape.block_size);
-      else if(((uint64_t*)entry)[0] == KEY_OBSNCHAN)
-        hgetu4(entry, "OBSNCHAN", &gr_blockinfo->datashape.n_obschan);
-      else if(((uint64_t*)entry)[0] == KEY_NPOL)
-        hgetu4(entry, "NPOL", &gr_blockinfo->datashape.n_pol);
-      else if(((uint64_t*)entry)[0] == KEY_NBITS)
-        hgetu4(entry, "NBITS", &gr_blockinfo->datashape.n_bit);
-      else if(((uint64_t*)entry)[0] == KEY_DIRECTIO)
-        hgeti4(entry, "DIRECTIO", &gr_blockinfo->directio);
-
-      if(gr_blockinfo->header_entry_callback != 0) {
-        gr_blockinfo->header_entry_callback(entry, gr_blockinfo->header_user_data);
-      }
+      _parse_entry(entry, &gr_blockinfo->metadata);
     }
     entry += 80;
     header_entry_count++;
@@ -69,7 +72,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
 
   if(gr_blockinfo != NULL) {
     gr_blockinfo->file_data_pos = data_start_pos;
-    if(gr_blockinfo->directio == 1) {
+    if(gr_blockinfo->metadata.directio == 1) {
       gr_blockinfo->file_data_pos = guppiraw_directio_align_value(gr_blockinfo->file_data_pos);
     }
   }
@@ -88,7 +91,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
 int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
   int rv = _guppiraw_parse_blockheader(fd, gr_blockinfo, 1);
   if(rv == 0){
-    guppiraw_datashape_t* datashape = &gr_blockinfo->datashape;
+    guppiraw_datashape_t* datashape = &gr_blockinfo->metadata.datashape;
     if(datashape->block_size == 0) {
       fprintf(stderr, "GuppiRaw Error: Header is missing a definition for `BLOCSIZE`.\n");
       return 2;
@@ -145,7 +148,7 @@ int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
     return rv;
   }
   guppiraw_seek_next_block(fd, ptr_blockinfo);
-  size_t bytesize_first_block = ptr_blockinfo->file_data_pos + guppiraw_directio_align_value(ptr_blockinfo->datashape.block_size);
+  size_t bytesize_first_block = ptr_blockinfo->file_data_pos + guppiraw_directio_align_value(ptr_blockinfo->metadata.datashape.block_size);
   gr_fileinfo->n_blocks = (gr_fileinfo->bytesize_file + bytesize_first_block-1)/bytesize_first_block;
 
   gr_fileinfo->file_header_pos = malloc(gr_fileinfo->n_blocks * sizeof(off_t));
@@ -232,7 +235,7 @@ static inline long _guppiraw_read_time_gap(
   const size_t read_size, const size_t chan_step_stride,
   void* buffer
 ) {
-  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.datashape;
+  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.metadata.datashape;
   
   const size_t chan_steps = chan/chan_step;
   const size_t time_steps = time/time_step;
@@ -261,7 +264,7 @@ static inline long _guppiraw_read_time_gap(
 }
 
 long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t time, const size_t chan, void* buffer) {
-  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.datashape;
+  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.metadata.datashape;
   if(gr_iterate->chan_index + chan > datashape->n_obschan) {
     // cannot gather in channel dimension
     fprintf(stderr, "Error: cannot gather in channel dimension.\n");

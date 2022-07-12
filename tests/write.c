@@ -33,10 +33,10 @@ int main(int argc, char const *argv[])
 		fprintf(stderr, "Error opening: %s.%04d.raw: %d\n", gr_iterate.stempath, gr_iterate.fileenum, rv);
 		return 1;
 	}
-	guppiraw_datashape_t* datashape = &gr_iterate.file_info.block_info.datashape;
+	guppiraw_datashape_t* datashape = &gr_iterate.file_info.block_info.metadata.datashape;
 	printf("\nRead datashape:\n");
 	printf("\tblock_size: %lu\n", datashape->block_size);
-	printf("\tdirectio: %d\n", gr_iterate.file_info.block_info.directio);
+	printf("\tdirectio: %d\n", gr_iterate.file_info.block_info.metadata.directio);
 	printf("\tn_obschan: %u\n", datashape->n_obschan);
 	printf("\tn_pol: %u\n", datashape->n_pol);
 	printf("\tn_bit: %u\n", datashape->n_bit);

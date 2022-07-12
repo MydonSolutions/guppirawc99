@@ -70,8 +70,12 @@ typedef struct {
   guppiraw_datashape_t datashape;
 
   // User data
-  void (*header_entry_callback)(char* entry, void* user_data);
-  void* header_user_data;
+  void (*user_callback)(char* entry, void* user_data);
+  void* user_data;
+} guppiraw_metadata_t;
+
+typedef struct {
+  guppiraw_metadata_t metadata;
 
   // File position fields
   off_t file_header_pos;
@@ -103,17 +107,19 @@ static inline off_t guppiraw_directio_align_value(off_t value) {
   return (value + 511) & ~((off_t)511);
 }
 
-static inline int guppiraw_seek_next_block(int fd, guppiraw_block_info_t* gr_blockinfo) {
+static inline int guppiraw_seek_next_block(int fd, const guppiraw_block_info_t* gr_blockinfo) {
   return lseek(
     fd,
-    gr_blockinfo->directio == 1 ? guppiraw_directio_align_value(gr_blockinfo->file_data_pos + gr_blockinfo->datashape.block_size) : gr_blockinfo->file_data_pos + gr_blockinfo->datashape.block_size,
+    gr_blockinfo->metadata.directio == 1 ? 
+      guppiraw_directio_align_value(gr_blockinfo->file_data_pos + gr_blockinfo->metadata.datashape.block_size) :
+      gr_blockinfo->file_data_pos + gr_blockinfo->metadata.datashape.block_size,
     0
   );
 }
 
 static inline int guppiraw_read_blockdata(int fd, const guppiraw_block_info_t* gr_blockinfo, void* buffer) {
   lseek(fd, gr_blockinfo->file_data_pos, SEEK_SET);
-  return read(fd, buffer, gr_blockinfo->datashape.block_size);
+  return read(fd, buffer, gr_blockinfo->metadata.datashape.block_size);
 }
 
 typedef struct {
@@ -135,25 +141,25 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t tim
 static inline long guppiraw_iterate_read_block(guppiraw_iterate_info_t* gr_iterate, void* buffer) {
   return guppiraw_iterate_read(
     gr_iterate,
-    gr_iterate->file_info.block_info.datashape.n_time,
-    gr_iterate->file_info.block_info.datashape.n_obschan,
+    gr_iterate->file_info.block_info.metadata.datashape.n_time,
+    gr_iterate->file_info.block_info.metadata.datashape.n_obschan,
     buffer
   );
 }
 
 static inline size_t guppiraw_iterate_bytesize(const guppiraw_iterate_info_t* gr_iterate, size_t time, size_t chan) {
   return chan * time * (
-    gr_iterate->file_info.block_info.datashape.block_size / 
+    gr_iterate->file_info.block_info.metadata.datashape.block_size / 
       (
-        gr_iterate->file_info.block_info.datashape.n_obschan * 
-        gr_iterate->file_info.block_info.datashape.n_time
+        gr_iterate->file_info.block_info.metadata.datashape.n_obschan * 
+        gr_iterate->file_info.block_info.metadata.datashape.n_time
     )
   );
 }
 
 static inline size_t guppiraw_iterate_filentime_remaining(const guppiraw_iterate_info_t* gr_iterate) {
   return (gr_iterate->file_info.n_blocks - gr_iterate->block_index)*
-    gr_iterate->file_info.block_info.datashape.n_time -
+    gr_iterate->file_info.block_info.metadata.datashape.n_time -
      gr_iterate->time_index
   ;
 }
