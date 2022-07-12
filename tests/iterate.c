@@ -7,15 +7,11 @@ typedef struct {
   int nants;
 } guppiraw_block_meta_t;
 
-void guppiraw_parse_block_meta(char* entry, void* block_meta_void) {
-  guppiraw_block_meta_t* block_meta = (guppiraw_block_meta_t*) block_meta_void;
-  switch (((uint64_t*)entry)[0]) {
-    case GUPPI_RAW_KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' '):
-      hgeti4(entry, "NANTS", &block_meta->nants);
-      break;
-    default:
-      break;
-  }
+const uint64_t KEY_UINT64_NANTS = GUPPI_RAW_KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' ');
+
+void guppiraw_parse_block_meta(const char* entry, void* block_meta) {
+  if(((uint64_t*)entry)[0] == KEY_UINT64_NANTS)
+    hgeti4(entry, "NANTS", &((guppiraw_block_meta_t*)block_meta)->nants);
 }
 
 size_t validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_t nchan, size_t repeat_time) {

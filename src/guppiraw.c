@@ -6,7 +6,7 @@ static const uint64_t KEY_NPOL      = GUPPI_RAW_KEY_UINT64_ID_LE('N','P','O','L'
 static const uint64_t KEY_NBITS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' ');
 static const uint64_t KEY_DIRECTIO  = GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O');
 
-static inline void _parse_entry(char* entry, guppiraw_metadata_t* metadata) {
+static inline void _parse_entry(const char* entry, guppiraw_metadata_t* metadata) {
   if(((uint64_t*)entry)[0] == KEY_BLOCSIZE)
     hgetu8(entry, "BLOCSIZE", &metadata->datashape.block_size);
   else if(((uint64_t*)entry)[0] == KEY_OBSNCHAN)
@@ -20,6 +20,14 @@ static inline void _parse_entry(char* entry, guppiraw_metadata_t* metadata) {
 
   if(metadata->user_callback != 0) {
     metadata->user_callback(entry, metadata->user_data);
+  }
+}
+
+void guppiraw_parse_blockheader_string(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length) {
+  int32_t entry_count = 0;
+  while(header_length > 0 && (entry_count+1)*80 < header_length) {
+    _parse_entry(header_string, metadata);
+    header_string += 80;
   }
 }
 

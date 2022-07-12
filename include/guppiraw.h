@@ -70,7 +70,7 @@ typedef struct {
   guppiraw_datashape_t datashape;
 
   // User data
-  void (*user_callback)(char* entry, void* user_data);
+  void (*user_callback)(const char* entry, void* user_data);
   void* user_data;
 } guppiraw_metadata_t;
 

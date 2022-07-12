@@ -10,7 +10,7 @@ typedef struct {
 const uint64_t KEY_UINT64_CHAN_BW  = GUPPI_RAW_KEY_UINT64_ID_LE('C','H','A','N','_','B','W',' ');
 const uint64_t KEY_UINT64_NANTS    = GUPPI_RAW_KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' ');
 
-void guppiraw_parse_block_meta(char* entry, void* block_meta) {
+void guppiraw_parse_block_meta(const char* entry, void* block_meta) {
   if(((uint64_t*)entry)[0] == KEY_UINT64_CHAN_BW) {
     hgetr8(entry, "CHAN_BW", &((guppiraw_block_meta_t*)block_meta)->chan_bw);
     ((guppiraw_block_meta_t*)block_meta)->tbin = 1.0/((guppiraw_block_meta_t*)block_meta)->chan_bw;
