@@ -1,5 +1,5 @@
-test('main', executable(
-  'main', ['main.c'],
+test('read_blockheader', executable(
+  'read_blockheader', ['read_blockheader.c'],
 	  dependencies: lib_guppiraw_dep,
   ),
   args: ['/mnt/buf0/golden_synthesized_input.0000.raw']
