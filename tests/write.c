@@ -3,7 +3,7 @@
 
 int main(int argc, char const *argv[])
 {
-	if(argc != 2) {
+	if(argc < 2) {
 		printf("Usage: %s output_stempath.\n",argv[0]);
 		return 1;
 	}
@@ -11,6 +11,9 @@ int main(int argc, char const *argv[])
 		printf("output_stempath length is larger than 245.\n");
 		return 1;
 	}
+
+	unsigned int seed = time(NULL);
+	srand(seed);
 
 	const int n_bits = 4;
 	const int n_pols = 1;
@@ -44,7 +47,9 @@ int main(int argc, char const *argv[])
 	}
 
 	for(; block_idx < blocks; block_idx++) {
-		memset(data, block_idx+48, block_bytesize);
+		for(int i = 0; i < block_bytesize/sizeof(int); i++)
+			((int*)data)[i] = rand();
+		
 		guppiraw_header_put_integer(&header, "BLKIDX", block_idx);
 		guppiraw_write_block(fd, &header, data, block_bytesize, 1);
 	}
@@ -66,6 +71,10 @@ int main(int argc, char const *argv[])
 	printf("\tn_time: %lu\n", metadata->datashape.n_time);
 
 	printf("Number of blocks in file: %d\n", gr_iterate.file_info.n_blocks);
+	if(gr_iterate.file_info.n_blocks != blocks) {
+		return 1;
+	}
+
 	for(int i = 0; i < gr_iterate.file_info.n_blocks; i++) {
 		printf(
 			"\tblock#%d: header @ %ld, data @ %ld\n",
@@ -74,10 +83,9 @@ int main(int argc, char const *argv[])
 			gr_iterate.file_info.file_data_pos[i]
 		);
 	}
-	
 
-	while(gr_iterate.fd > 0) {
-		const int expected_data = gr_iterate.block_index;
+	srand(seed);
+	while(gr_iterate.fd > 0 && gr_iterate.block_index < gr_iterate.file_info.n_blocks) {
 		fprintf(stderr,
 			"block #%d[c=%lu,t=%lu] time=%lu, chan=%u...",
 			gr_iterate.block_index,
@@ -87,12 +95,17 @@ int main(int argc, char const *argv[])
 		);
 
 		guppiraw_iterate_read_block(&gr_iterate, data);
-		if(((char*)data)[0] == expected_data+48) {
+		
+		size_t bytes_wrong = 0;
+		for(int i = 0; i < block_bytesize/sizeof(int); i++)
+			bytes_wrong += ((int*)data)[i] != rand();
+		
+		if(bytes_wrong == 0){
 			block_idx--;
 			fprintf(stderr, "correct!\n");
 		}
 		else {
-			fprintf(stderr, "Data[0] is %c instead of %c!\n", ((char*)data)[0], expected_data+48);
+			fprintf(stderr, "wrong!\n");
 		}
 	}
 
