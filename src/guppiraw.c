@@ -248,7 +248,7 @@ int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr
     gr_iterate->fileenum = atoi(filepath + gr_iterate->stempath_len + 1);
   }
 
-  gr_iterate->stempath = malloc(gr_iterate->stempath_len);
+  gr_iterate->stempath = malloc(gr_iterate->stempath_len+1);
   strncpy(gr_iterate->stempath, filepath, gr_iterate->stempath_len);
   gr_iterate->stempath[gr_iterate->stempath_len] = '\0';
   
