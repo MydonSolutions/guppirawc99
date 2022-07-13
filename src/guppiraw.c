@@ -1,21 +1,27 @@
 #include "guppiraw.h"
 
-static const uint64_t KEY_BLOCSIZE  = GUPPI_RAW_KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E');
-static const uint64_t KEY_OBSNCHAN  = GUPPI_RAW_KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N');
-static const uint64_t KEY_NPOL      = GUPPI_RAW_KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' ');
-static const uint64_t KEY_NBITS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' ');
-static const uint64_t KEY_DIRECTIO  = GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O');
+static const uint64_t KEY_UINT64_BLOCSIZE  = GUPPI_RAW_KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E');
+static const uint64_t KEY_UINT64_NANTS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' ');
+static const uint64_t KEY_UINT64_NBEAMS    = GUPPI_RAW_KEY_UINT64_ID_LE('N','B','E','A','M','S',' ',' ');
+static const uint64_t KEY_UINT64_OBSNCHAN  = GUPPI_RAW_KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N');
+static const uint64_t KEY_UINT64_NPOL      = GUPPI_RAW_KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' ');
+static const uint64_t KEY_UINT64_NBITS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' ');
+static const uint64_t KEY_UINT64_DIRECTIO  = GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O');
 
 static inline void _parse_entry(const char* entry, guppiraw_metadata_t* metadata) {
-  if(((uint64_t*)entry)[0] == KEY_BLOCSIZE)
+  if(((uint64_t*)entry)[0] == KEY_UINT64_BLOCSIZE)
     hgetu8(entry, "BLOCSIZE", &metadata->datashape.block_size);
-  else if(((uint64_t*)entry)[0] == KEY_OBSNCHAN)
+  else if(((uint64_t*)entry)[0] == KEY_UINT64_NANTS)
+    hgetu4(entry, "NANTS", &metadata->datashape.n_ant);
+  else if(((uint64_t*)entry)[0] == KEY_UINT64_NBEAMS)
+    hgetu4(entry, "NBEAMS", &metadata->datashape.n_beam);
+  else if(((uint64_t*)entry)[0] == KEY_UINT64_OBSNCHAN)
     hgetu4(entry, "OBSNCHAN", &metadata->datashape.n_obschan);
-  else if(((uint64_t*)entry)[0] == KEY_NPOL)
+  else if(((uint64_t*)entry)[0] == KEY_UINT64_NPOL)
     hgetu4(entry, "NPOL", &metadata->datashape.n_pol);
-  else if(((uint64_t*)entry)[0] == KEY_NBITS)
+  else if(((uint64_t*)entry)[0] == KEY_UINT64_NBITS)
     hgetu4(entry, "NBITS", &metadata->datashape.n_bit);
-  else if(((uint64_t*)entry)[0] == KEY_DIRECTIO)
+  else if(((uint64_t*)entry)[0] == KEY_UINT64_DIRECTIO)
     hgeti4(entry, "DIRECTIO", &metadata->directio);
 
   if(metadata->user_callback != 0) {
@@ -122,13 +128,22 @@ int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
       datashape->n_bit = 4;
     }
 
-    datashape->bytesize_complexsample = (2*datashape->n_bit)/8;
-    const size_t denominator = datashape->n_obschan * datashape->n_pol * datashape->bytesize_complexsample;
-    datashape->n_time = datashape->block_size / (denominator);
+    datashape->n_aspect = 1;
+    if(datashape->n_ant > 0) {
+      datashape->n_aspect = datashape->n_ant;
+    }
+    if(datashape->n_beam > 0) {
+      datashape->n_aspect = datashape->n_beam;
+    }
+    datashape->n_aspectchan = datashape->n_obschan/datashape->n_aspect;
 
-    datashape->bytestride_polarization = datashape->bytesize_complexsample;
-    datashape->bytestride_time = datashape->bytestride_polarization*datashape->n_pol;
-    datashape->bytestride_frequency = datashape->bytestride_time*datashape->n_time;
+    datashape->bytestride_aspect = datashape->block_size/datashape->n_aspect;
+    datashape->bytestride_channel = datashape->bytestride_aspect/datashape->n_aspectchan;
+    
+    datashape->bytestride_polarization = (2*datashape->n_bit)/8; // TODO assert > 0
+    datashape->bytestride_time = datashape->n_pol*datashape->bytestride_polarization;
+
+    datashape->n_time = datashape->bytestride_channel / datashape->bytestride_time;
   }
   return rv;
 }
@@ -247,54 +262,97 @@ typedef struct {
   off_t fd_offset;
 } preadv_parameters_t;
 
+
+/*
+ *  block         !HEADER!_______________________________________________________________________________________________________________________!HEADER!_______________________________________________________________________________________________________________________!
+ *  aspect               !___________________________________________________________!___________________________________________________________!      !___________________________________________________________!___________________________________________________________!
+ *  channel              !___________________!___________________!___________________!___________________!___________________!___________________!      !___________________!___________________!___________________!___________________!___________________!___________________!
+ *  time                 !___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!      !___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!
+ *  polarization         !_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!      !_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!
+ *  samples              !SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS!      !SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS!
+ *
+ */
+
 static inline long _guppiraw_read_time_span(
   const guppiraw_iterate_info_t* gr_iterate,
-  const size_t time, const size_t time_step,
-  const size_t chan, const size_t chan_step,
-  const size_t read_size, const size_t chan_step_stride,
+  const size_t ntime, const size_t time_step,
+  const size_t nchan, const size_t chan_step,
+  const size_t naspect, const size_t aspect_step,
+  const size_t time_step_stride,
   void* buffer
 ) {
   const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.metadata.datashape;
-  if(time <= datashape->n_time) {
+  if(ntime <= datashape->n_time) {
     // should never happen
     fprintf(
       stderr,
-      "_guppiraw_read_time_span exclusively for reading across blocks!\n"
+      "_guppiraw_read_time_span exclusively for reading across block_!\n"
     );
     exit(1);
   }
   
-  const size_t chan_steps = chan/chan_step;
-  const size_t time_steps = time/time_step;
+  const size_t aspect_steps = naspect/aspect_step;
+  const size_t chan_steps = nchan/chan_step;
+  const size_t time_steps = ntime/time_step;
 
   long bytes_read = 0;
 
   const long max_iovecs = sysconf(_SC_IOV_MAX);
   preadv_parameters_t pread_params = {0};
   pread_params.iovecs = malloc(max_iovecs * sizeof(struct iovec));
+  pread_params.iovec_count = 0;
 
   for(size_t time_i = 0; time_i < time_steps; time_i++) {
     const size_t time_index = gr_iterate->time_index + time_i*time_step;
-    
-    pread_params.fd_offset = gr_iterate->file_info.file_data_pos[
-      gr_iterate->block_index + time_index / datashape->n_time
-    ];
-    pread_params.fd_offset += gr_iterate->chan_index * datashape->bytestride_frequency;
-    for(size_t chan_i = 0; chan_i < chan_steps; chan_i++) {
-      pread_params.iovecs[pread_params.iovec_count].iov_len = read_size;
-      pread_params.iovecs[pread_params.iovec_count].iov_base = buffer + 
-        chan_i*chan_step_stride +
-        time_i*read_size;
 
-      pread_params.iovec_count++;
-      if(pread_params.iovec_count == max_iovecs) {
+    const size_t fd_time_offset_chan_index = 
+      gr_iterate->file_info.file_data_pos[gr_iterate->block_index + (time_index / datashape->n_time)] + 
+        (time_index % datashape->n_time) * datashape->bytestride_time +
+        (gr_iterate->chan_index)*datashape->bytestride_channel;
+
+    for(size_t aspect_i = 0; aspect_i < aspect_steps; aspect_i++) {
+      pread_params.fd_offset = fd_time_offset_chan_index + (gr_iterate->aspect_index+aspect_i)*datashape->bytestride_aspect;
+      for(size_t chan_i = 0; chan_i < chan_steps; chan_i++) {
+        pread_params.iovecs[pread_params.iovec_count].iov_len = time_step_stride;
+        pread_params.iovecs[pread_params.iovec_count].iov_base = buffer + 
+          ((aspect_i*chan_steps + chan_i)*time_steps + time_i)*time_step_stride;
+        pread_params.iovec_count++;
+
+        if(pread_params.iovec_count == max_iovecs) {
+          const long bytes_preadv = preadv(
+            gr_iterate->fd,
+            pread_params.iovecs,
+            pread_params.iovec_count,
+            pread_params.fd_offset
+          );
+          if(bytes_preadv != time_step_stride*max_iovecs) {
+            fprintf(
+              stderr,
+              "preadv(..., %d, %ld) errored: %ld (fd:%d @ %ld)\n\t",
+              pread_params.iovec_count,
+              pread_params.fd_offset,
+              bytes_preadv,
+              gr_iterate->fd,
+              lseek(gr_iterate->fd, 0, SEEK_CUR)
+            );
+            perror("");
+          }
+          bytes_read += bytes_preadv;
+
+          pread_params.iovec_count = 0;
+          pread_params.fd_offset += time_step_stride*max_iovecs;
+        }
+      }
+
+      // read any stragglers for this block, before fd_offset changes
+      if(pread_params.iovec_count > 0) {
         const long bytes_preadv = preadv(
           gr_iterate->fd,
           pread_params.iovecs,
           pread_params.iovec_count,
           pread_params.fd_offset
         );
-        if(bytes_preadv <= 0) {
+        if(bytes_preadv != time_step_stride*pread_params.iovec_count) {
           fprintf(
             stderr,
             "preadv(..., %d, %ld) errored: %ld (fd:%d @ %ld)\n\t",
@@ -307,35 +365,10 @@ static inline long _guppiraw_read_time_span(
           perror("");
         }
         bytes_read += bytes_preadv;
-
         pread_params.iovec_count = 0;
-        pread_params.fd_offset += read_size*max_iovecs;
       }
     }
 
-    // read any stragglers for this block, before fd_offset changes
-    if(pread_params.iovec_count > 0) {
-      const long bytes_preadv = preadv(
-        gr_iterate->fd,
-        pread_params.iovecs,
-        pread_params.iovec_count,
-        pread_params.fd_offset
-      );
-      if(bytes_preadv <= 0) {
-        fprintf(
-          stderr,
-          "preadv(..., %d, %ld) errored: %ld (fd:%d @ %ld)\n\t",
-          pread_params.iovec_count,
-          pread_params.fd_offset,
-          bytes_preadv,
-          gr_iterate->fd,
-          lseek(gr_iterate->fd, 0, SEEK_CUR)
-        );
-        perror("");
-      }
-      bytes_read += bytes_preadv;
-      pread_params.iovec_count = 0;
-    }
   }
 
   free(pread_params.iovecs);
@@ -344,34 +377,52 @@ static inline long _guppiraw_read_time_span(
 
 static inline long _guppiraw_read_time_gap(
   const guppiraw_iterate_info_t* gr_iterate,
-  const size_t time, const size_t time_step,
-  const size_t chan, const size_t chan_step,
-  const size_t read_size, const size_t chan_step_stride,
+  const size_t ntime, const size_t time_step,
+  const size_t nchan, const size_t chan_step,
+  const size_t naspect, const size_t aspect_step,
+  const size_t time_step_stride,
   void* buffer
 ) {
   const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.metadata.datashape;
   
-  const size_t chan_steps = chan/chan_step;
-  const size_t time_steps = time/time_step;
+  const size_t aspect_steps = naspect/aspect_step;
+  const size_t chan_steps = nchan/chan_step;
+  const size_t time_steps = ntime/time_step;
   long bytes_read = 0;
 
   for (size_t time_i = 0; time_i < time_steps; time_i++) {
     const size_t time_index = gr_iterate->time_index + time_i*time_step;
-    for (size_t chan_i = 0; chan_i < chan_steps; chan_i++) {
-      lseek(
-        gr_iterate->fd,
-        gr_iterate->file_info.file_data_pos[gr_iterate->block_index + (time_index / datashape->n_time)] + 
-          (time_index % datashape->n_time) * datashape->bytestride_time +
-          (gr_iterate->chan_index + chan_i*chan_step) * datashape->bytestride_frequency,
-        SEEK_SET
-      );
-      bytes_read += read(
-        gr_iterate->fd,
-        buffer + 
-          chan_i*chan_step_stride +
-          time_i*read_size,
-        read_size
-      );
+    for (size_t aspect_i = 0; aspect_i < aspect_steps; aspect_i++) {
+      for (size_t chan_i = 0; chan_i < chan_steps; chan_i++) {
+        lseek(
+          gr_iterate->fd,
+          gr_iterate->file_info.file_data_pos[gr_iterate->block_index + (time_index / datashape->n_time)] + 
+            (time_index % datashape->n_time) * datashape->bytestride_time +
+            (gr_iterate->chan_index + chan_i*chan_step) * datashape->bytestride_channel +
+            (gr_iterate->aspect_index + aspect_i*aspect_step) * datashape->bytestride_aspect,
+          SEEK_SET
+        );
+        const long _bytes_read = read(
+          gr_iterate->fd,
+          buffer + 
+            ((aspect_i*chan_steps + chan_i)*time_steps + time_i)*time_step_stride,
+          time_step_stride
+        );
+        if(_bytes_read != time_step_stride) {
+          fprintf(
+            stderr,
+            "Did not read %lu bytes: %ld\n\ta=%lu c=%lu t=%lu: %lu\n\t@ %ld/%lu\n\t",
+            time_step_stride,
+            _bytes_read,
+            aspect_i, chan_i, time_i,
+            ((aspect_i*chan_steps + chan_i)*time_steps + time_i)*time_step_stride,
+            lseek(gr_iterate->fd, 0, SEEK_CUR),
+            gr_iterate->file_info.bytesize_file
+          );
+          perror("");
+        }
+        bytes_read += _bytes_read;
+      }
     }
   }
   return bytes_read;
@@ -383,11 +434,16 @@ static inline long _guppiraw_read_time_gap(
  *  0 : Could not open the subsequent file
  *  X : Bytes read 
  */
-long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t time, const size_t chan, void* buffer) {
+long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer) {
   const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.metadata.datashape;
-  if(gr_iterate->chan_index + chan > datashape->n_obschan) {
+  if(gr_iterate->chan_index + nchan > datashape->n_aspectchan) {
     // cannot gather in channel dimension
     fprintf(stderr, "Error: cannot gather in channel dimension.\n");
+    return -1;
+  }
+  if(gr_iterate->aspect_index + naspect > datashape->n_aspect) {
+    // cannot gather in aspect dimension
+    fprintf(stderr, "Error: cannot gather in aspect dimension.\n");
     return -1;
   }
   if(gr_iterate->block_index == gr_iterate->file_info.n_blocks) {
@@ -397,7 +453,7 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t tim
     }
   }
   // check that time request is a factor of remaining file_ntime
-  if(guppiraw_iterate_filentime_remaining(gr_iterate) < time) {
+  if(guppiraw_iterate_filentime_remaining(gr_iterate) < ntime) {
     // TODO handle 2 files at a time.
     fprintf(
       stderr,
@@ -405,61 +461,68 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t tim
       (gr_iterate->file_info.n_blocks - gr_iterate->block_index),
       gr_iterate->time_index,
       datashape->n_time,
-      time
+      ntime
     );
     return -1;
   }
 
   long bytes_read = 0;
   if(buffer != NULL) {
-    if(time == datashape->n_time && chan == datashape->n_obschan && gr_iterate->chan_index == 0 && gr_iterate->time_index == 0) {
+    if(
+      ntime == datashape->n_time && nchan == datashape->n_aspectchan && naspect == datashape->n_aspect &&
+      gr_iterate->aspect_index == 0 && gr_iterate->chan_index == 0 && gr_iterate->time_index == 0
+    ) {
+      // plain and simple block verbatim read
       lseek(gr_iterate->fd, gr_iterate->file_info.file_data_pos[gr_iterate->block_index], SEEK_SET);
       bytes_read += read(gr_iterate->fd, buffer, datashape->block_size);
     }
     else {
       // interleave time-slice reads for different channels (maintain frequency as slowest axis)
-      const size_t chan_step = time != datashape->n_time ? 1 : chan;
+      const size_t chan_step = ntime != datashape->n_time ? 1 : nchan;
+      const size_t aspect_step = ntime != datashape->n_time || nchan != datashape->n_aspectchan ? 1 : naspect;
+
       // can read at most NTIME in the time dimension
-      const size_t time_step = time > datashape->n_time ? datashape->n_time : time;
+      const size_t time_step = ntime > datashape->n_time ? datashape->n_time : ntime;
 
-      const size_t read_size = guppiraw_iterate_bytesize(gr_iterate, time_step, chan_step);
-      const size_t chan_step_stride = guppiraw_iterate_bytesize(gr_iterate, time, 1);
+      const size_t time_step_stride = guppiraw_iterate_bytesize(gr_iterate, time_step, chan_step, aspect_step);
 
-      if ((gr_iterate->time_index + time - 1)/datashape->n_time == 0) {
+      if ((gr_iterate->time_index + ntime - 1)/datashape->n_time == 0) {
+        // if time iteration spans < 1 block, iovecs striding is useless
+        //   because iovecs spread contiguous file-data, and the
+        //   file-data is being broken up at the time index with only
+        //   the [Pol, Sample] dimensions being smaller.
         bytes_read += _guppiraw_read_time_gap(
           gr_iterate,
-          time, time_step,
-          chan, chan_step,
-          read_size, chan_step_stride,
+          ntime, time_step,
+          nchan, chan_step,
+          naspect, aspect_step,
+          time_step_stride,
           buffer
         );
       }
       else {
         bytes_read += _guppiraw_read_time_span(
           gr_iterate,
-          time, time_step,
-          chan, chan_step,
-          read_size, chan_step_stride,
+          ntime, time_step,
+          nchan, chan_step,
+          naspect, aspect_step,
+          time_step_stride,
           buffer
         );
       }
     }
   }
-
-  gr_iterate->chan_index = (gr_iterate->chan_index + chan) % datashape->n_obschan;
-  if(gr_iterate->chan_index == 0) {
-    if(gr_iterate->time_index + time >= datashape->n_time) {
-      // increment to at least the next block
-      if(time < datashape->n_time) {
-        gr_iterate->block_index += 1;  
+  
+  if(gr_iterate->chan_index + nchan >= datashape->n_aspectchan) {
+    if(gr_iterate->aspect_index + naspect >= datashape->n_aspect) {
+      if(gr_iterate->time_index + ntime >= datashape->n_time) {
+        gr_iterate->block_index += (gr_iterate->time_index + ntime) / datashape->n_time;
       }
-      else {
-        gr_iterate->block_index += time / datashape->n_time;
-      }
+      gr_iterate->time_index = (gr_iterate->time_index + ntime) % datashape->n_time;
     }
-
-    gr_iterate->time_index = (gr_iterate->time_index + time) % datashape->n_time;
+    gr_iterate->aspect_index = (gr_iterate->aspect_index + naspect) % datashape->n_aspect;
   }
+  gr_iterate->chan_index = (gr_iterate->chan_index + nchan) % datashape->n_aspectchan;
 
   return bytes_read;
 }

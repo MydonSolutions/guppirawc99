@@ -52,17 +52,21 @@
 typedef struct {
   // Header populated fields
   uint32_t n_obschan;
+  uint32_t n_ant;
+  uint32_t n_beam;
   uint32_t n_pol;
   uint32_t n_bit;
   uint64_t block_size;
 
   // Header inferred fields
   size_t n_time;
+  uint32_t n_aspect;
+  uint32_t n_aspectchan;
 
-  size_t bytesize_complexsample;
   size_t bytestride_polarization;
   size_t bytestride_time;
-  size_t bytestride_frequency;
+  size_t bytestride_channel;
+  size_t bytestride_aspect;
 } guppiraw_datashape_t;
 
 typedef struct {
@@ -138,28 +142,24 @@ typedef struct {
   int block_index;
   size_t time_index;
   size_t chan_index;
+  size_t aspect_index;
 } guppiraw_iterate_info_t;
 
 int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr_iterate);
-long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t time, const size_t chan, void* buffer);
+long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer);
 
 static inline long guppiraw_iterate_read_block(guppiraw_iterate_info_t* gr_iterate, void* buffer) {
   return guppiraw_iterate_read(
     gr_iterate,
     gr_iterate->file_info.block_info.metadata.datashape.n_time,
-    gr_iterate->file_info.block_info.metadata.datashape.n_obschan,
+    gr_iterate->file_info.block_info.metadata.datashape.n_aspectchan,
+    gr_iterate->file_info.block_info.metadata.datashape.n_aspect,
     buffer
   );
 }
 
-static inline size_t guppiraw_iterate_bytesize(const guppiraw_iterate_info_t* gr_iterate, size_t time, size_t chan) {
-  return chan * time * (
-    gr_iterate->file_info.block_info.metadata.datashape.block_size / 
-      (
-        gr_iterate->file_info.block_info.metadata.datashape.n_obschan * 
-        gr_iterate->file_info.block_info.metadata.datashape.n_time
-    )
-  );
+static inline size_t guppiraw_iterate_bytesize(const guppiraw_iterate_info_t* gr_iterate, size_t ntime, size_t nchan, size_t naspect) {
+  return naspect * nchan * ntime * gr_iterate->file_info.block_info.metadata.datashape.bytestride_time;
 }
 
 static inline size_t guppiraw_iterate_filentime_remaining(const guppiraw_iterate_info_t* gr_iterate) {
