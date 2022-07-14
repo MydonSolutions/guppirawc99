@@ -152,9 +152,9 @@ int main(int argc, char const *argv[])
     if(!(argc == 3 && strncmp("-b", argv[1], 2)) == 0) {
       fprintf(
         stderr,
-        "Usage: `%s [opttions] input_filepath`\n"\
-        "options:\n\t"\
-        "-b\t\tBenchmark instead of validate.\n",
+        "Usage: `%s [options] input_filepath`\n"\
+        "options:\n"\
+        "\t-b\t\tBenchmark instead of validate.\n",
         argv[0]
       );
       return 1;
