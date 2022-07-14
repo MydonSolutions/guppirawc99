@@ -11,9 +11,7 @@ This library support ingesting and creating GUPPI RAW files. Such files have one
  complex samples       !SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS!
 ```
 
-:
-
-There is only one critical header-entry, the ommission of which results in an error, while further header-entries required to specify the block's shape, but have default values:
+There is only one critical header-entry (`BLOCSIZE`), the ommission of which results in an error, while further header-entries specify the block's shape, but have default values:
 
 Key 		 | Value | Default
 ---------|-|-
@@ -24,7 +22,6 @@ NBEAMS   | Number of beam-aspects (overrules NANTS). `integer > 0` | 0
 NPOL     | Number of polarizations. `integer > 0` | 1
 NBITS    | Number of bits per complex-component. `integer > 0` | 4
 DIRECTIO | Header and Data are DIRECTIO (512) aligned with padding, or not. `integer [0, 1]` | 0
-
 
 **Key features are**:
 - multi-aspect files (antenna or beams)
@@ -61,9 +58,9 @@ Both the [`write`](./tests/write.c) and [`iterate`](./tests/iterate.c) test exec
 The test rig is an `AMD EPYC 7352 24-Core Processor` machine, with 4 `TOSHIBA MQ01ABD1` NVMe drives in Raid0, `xfs` formatted.
 It measured **roughly 8.7 GB/s when writing a 33 GB DIRECTIO file**.
 
-The read-iterate benchmark is more complicated, owing to the fact that iteration-datashapes are configurable. The benchmark readig the is captured in [text](./benchmarks/iterate.txt) and further plotted below.
+The read-iterate benchmark is more complicated, owing to the fact that iteration-datashapes are configurable. The benchmark, on the same 33 GB DIRECTIO file, is captured in [text](./benchmarks/iterate.txt) and further plotted below.
 - Iteration block-shapes with a time-dimension less than that of the blocks in the file have a drastically lower throughput.  
-- Iteration block-shapes with a time-dimension greater than or equal to that of the blocks in the file have a stable throughput between **8 and 10 GB/s** with DIRECTIO.
+- Iteration block-shapes with a time-dimension greater than or equal to that of the blocks in the file have a stable throughput between **8 and 10 GB/s**.
 
 ![Read-Iterate Benchmarks Plot](./benchmarks/iterate_benchmark.png)
 
