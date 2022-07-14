@@ -160,12 +160,12 @@ int main(int argc, char const *argv[])
 {
   int benchmark_not_validate = 0;
   if(argc != 2) {
-    if(!(argc == 3 && strncmp("-b", argv[1], 2)) == 0) {
+    if(!(argc == 3 && strncmp("-V", argv[1], 2)) == 0) {
       fprintf(
         stderr,
         "Usage: `%s [options] input_filepath`\n"\
         "options:\n"\
-        "\t-b\t\tBenchmark instead of validate.\n",
+        "\t-V\t\tDo not validate iterations, benchmark instead.\n",
         argv[0]
       );
       return 1;
