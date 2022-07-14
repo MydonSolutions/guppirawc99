@@ -3,6 +3,9 @@
 #include <assert.h>
 #include "guppiraw.h"
 
+#define ELAPSED_NS(start,stop) \
+  (((int64_t)stop.tv_sec-start.tv_sec)*1000*1000*1000+(stop.tv_nsec-start.tv_nsec))
+
 typedef struct {
   double chan_bw;
   double tbin;
@@ -116,29 +119,37 @@ long benchmark_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size
   const size_t repeat_chan = datashape->n_aspectchan/nchan;
   const size_t repetitions = repeat_time * repeat_chan * repeat_aspect;
   
-  void *buffer = malloc(bytesize);
-  clock_t start = clock();
+  void *buffer __attribute__ ((aligned (512))) = memalign(
+    512,
+    guppiraw_directio_align(bytesize)
+  );
+  struct timespec start, stop;
+	uint64_t reading_ns = 0;
 
   size_t repitition;
+  size_t rv;
   for(repitition = 0; repitition < repetitions && gr_iterate->fd >= 0; repitition++) {
-    if(guppiraw_iterate_read(
-      gr_iterate,
-      ntime,
-      nchan,
-      naspect,
-      buffer
-    ) != bytesize) {
-      fprintf(stderr, "ERROR!");
+    clock_gettime(CLOCK_MONOTONIC, &start);
+      rv = guppiraw_iterate_read(
+        gr_iterate,
+        ntime,
+        nchan,
+        naspect,
+        buffer
+      );
+		clock_gettime(CLOCK_MONOTONIC, &stop);
+		reading_ns += ELAPSED_NS(start, stop);
+    if(rv != bytesize) {
+      fprintf(stderr, "ERROR (%ld)!\n\t", rv);
+      perror("");
       return 1;
     }
   };
 
-  double elapsed_s = (double)(clock() - start)/ CLOCKS_PER_SEC;
-
   printf("iterations: %lu / %f s (%f GB/s)\n",
     repitition,
-    elapsed_s,
-    repitition*bytesize/(elapsed_s * 1e9)
+    (double)reading_ns/1e9,
+    (double)repitition*bytesize/(double)reading_ns
   );
   
   free(buffer);
