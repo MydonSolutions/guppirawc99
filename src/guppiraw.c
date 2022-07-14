@@ -650,12 +650,19 @@ char* guppiraw_header_malloc_string(const guppiraw_header_t* header, const char 
   return header_string;
 }
 
-void guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data, const uint32_t block_size, const char directio) {
+ssize_t guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data, const uint32_t block_size, const char directio) {
   char* header_string = guppiraw_header_malloc_string(header, directio);
   const size_t header_entries_len = (header->n_entries+1) * 80;
   const size_t header_string_len = directio ? guppiraw_directio_align(header_entries_len) : header_entries_len;
-  off_t file_pos = lseek(fd, 0, SEEK_CUR);
-  file_pos += write(fd, header_string, header_string_len);
-  file_pos += write(fd, data, directio ? guppiraw_directio_align(block_size) : block_size);
+
+  struct iovec* block_iovecs = malloc(2*sizeof(struct iovec));
+  block_iovecs[0].iov_base = header_string;
+  block_iovecs[0].iov_len = header_string_len;
+
+  block_iovecs[1].iov_base = data;
+  block_iovecs[1].iov_len = directio ? guppiraw_directio_align(block_size) : block_size;
+
+  ssize_t bytes_written = writev(fd, block_iovecs, 2);
   free(header_string);
+  return bytes_written;
 }

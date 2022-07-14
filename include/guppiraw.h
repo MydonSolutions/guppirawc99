@@ -191,6 +191,6 @@ int guppiraw_header_put_integer(guppiraw_header_t* header, const char* key, cons
 void guppiraw_header_free(guppiraw_header_t* header);
 
 char* guppiraw_header_malloc_string(const guppiraw_header_t* header, const char directio);
-void guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data, const uint32_t block_size, const char directio);
+ssize_t guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data, const uint32_t block_size, const char directio);
 
 #endif// GUPPI_RAW_C99_H_
