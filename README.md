@@ -53,3 +53,19 @@ DIRECTIO | Header and Data are DIRECTIO (512) aligned with padding, or not. `int
 	       $ cd build
 	build/ $ ninja && ninja test && ninja install
 	```
+
+## Benchmarks
+
+Both the [`write`](./tests/write.c) and [`iterate`](./tests/iterate.c) test executables accept a `-V` option to instead benchmark writing and read-iterating through files, respectively.
+
+The test rig is an `AMD EPYC 7352 24-Core Processor` machine, with 4 `TOSHIBA MQ01ABD1` NVMe drives in Raid0, `xfs` formatted.
+It measured **roughly 8.7 GB/s when writing a 33 GB DIRECTIO file**.
+
+The read-iterate benchmark is more complicated, owing to the fact that iteration-datashapes are configurable. The benchmark readig the is captured in [text](./benchmarks/iterate.txt) and further plotted below.
+- Iteration block-shapes with a time-dimension less than that of the blocks in the file have a drastically lower throughput.  
+- Iteration block-shapes with a time-dimension greater than or equal to that of the blocks in the file have a stable throughput between **8 and 10 GB/s** with DIRECTIO.
+
+![Read-Iterate Benchmarks Plot](./benchmarks/iterate_benchmark.png)
+
+
+*There is also a [`key_comparison`](./tests/key_comparison.c) executable generated that measures the current key-comparison operation to be the fastest.*
