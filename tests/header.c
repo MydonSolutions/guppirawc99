@@ -26,7 +26,7 @@ int main(int argc, char const *argv[])
 	guppiraw_header_put_double(&header, "CHAN_BW", 0.1024);
 	guppiraw_header_put_double(&header, "CHAN_BW", 0.5);
   
-	char* header_string = guppiraw_header_malloc_string(&header);
+	char* header_string = guppiraw_header_malloc_string(&header, 0);
 	printf("%s\n", header_string);
 
 	int rv = 0;

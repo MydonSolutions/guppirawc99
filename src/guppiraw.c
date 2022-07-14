@@ -593,18 +593,6 @@ int guppiraw_header_put_integer(guppiraw_header_t* header, const char* key, cons
   return 0;
 }
 
-char* guppiraw_header_malloc_string(guppiraw_header_t* header) {
-  const int n_entries = header->n_entries;
-  guppiraw_header_llnode_t* header_entry = header->head;
-  char* header_string = malloc((n_entries + 1) * 80);
-  for(int i = 0; i < n_entries; i++) {
-    memcpy(header_string + i*80, header_entry->keyvalue, 80);
-    header_entry = header_entry->next;
-  }
-  memcpy(header_string + n_entries*80, GUPPI_RAW_HEADER_END_STR, 80);
-  return header_string;
-}
-
 void _guppiraw_header_free(guppiraw_header_llnode_t* head) {
   if(head->next != NULL) {
     _guppiraw_header_free(head->next);
@@ -624,17 +612,38 @@ const char _guppiraw_directio_padding_buffer[513] =
 "********************************************************************************************************************************"
 "********************************************************************************************************************************";
 
-void guppiraw_write_block(int fd, guppiraw_header_t* header, void* data, uint32_t block_size, char directio) {
-  char* header_string = guppiraw_header_malloc_string(header);
-  const size_t header_string_len = (header->n_entries+1) * 80;
+char* guppiraw_header_malloc_string(const guppiraw_header_t* header, const char directio) {
+  const int n_entries = header->n_entries;
+  const size_t header_entries_len = (n_entries + 1) * 80;
+  guppiraw_header_llnode_t* header_entry = header->head;
+  char* header_string;
+  if(directio) {
+    const size_t header_entries_len_aligned = guppiraw_directio_align(header_entries_len);
+    header_string = memalign(512, header_entries_len_aligned);
+    memcpy(
+      header_string + header_entries_len,
+      _guppiraw_directio_padding_buffer,
+      header_entries_len_aligned - header_entries_len
+    );
+  }
+  else {
+    header_string = malloc(header_entries_len);
+  }
+
+  for(int i = 0; i < n_entries; i++) {
+    memcpy(header_string + i*80, header_entry->keyvalue, 80);
+    header_entry = header_entry->next;
+  }
+  memcpy(header_string + n_entries*80, GUPPI_RAW_HEADER_END_STR, 80);
+  return header_string;
+}
+
+void guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data, const uint32_t block_size, const char directio) {
+  char* header_string = guppiraw_header_malloc_string(header, directio);
+  const size_t header_entries_len = (header->n_entries+1) * 80;
+  const size_t header_string_len = directio ? guppiraw_directio_align(header_entries_len) : header_entries_len;
   off_t file_pos = lseek(fd, 0, SEEK_CUR);
   file_pos += write(fd, header_string, header_string_len);
-  if(directio) {
-    file_pos += write(fd, _guppiraw_directio_padding_buffer, guppiraw_directio_align(file_pos) - file_pos);
-  }
-  file_pos += write(fd, data, block_size);
-  if(directio) {
-    write(fd, _guppiraw_directio_padding_buffer, guppiraw_directio_align(file_pos) - file_pos);
-  }
+  file_pos += write(fd, data, directio ? guppiraw_directio_align(block_size) : block_size);
   free(header_string);
 }
