@@ -92,7 +92,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
   if(gr_blockinfo != NULL) {
     gr_blockinfo->file_data_pos = data_start_pos;
     if(gr_blockinfo->metadata.directio == 1) {
-      gr_blockinfo->file_data_pos = guppiraw_directio_align_value(gr_blockinfo->file_data_pos);
+      gr_blockinfo->file_data_pos = guppiraw_directio_align(gr_blockinfo->file_data_pos);
     }
   }
   return 0;
@@ -176,7 +176,7 @@ int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
     return rv;
   }
   guppiraw_seek_next_block(fd, ptr_blockinfo);
-  size_t bytesize_first_block = ptr_blockinfo->file_data_pos + guppiraw_directio_align_value(ptr_blockinfo->metadata.datashape.block_size);
+  size_t bytesize_first_block = ptr_blockinfo->file_data_pos + guppiraw_directio_align(ptr_blockinfo->metadata.datashape.block_size);
   gr_fileinfo->n_blocks = (gr_fileinfo->bytesize_file + bytesize_first_block-1)/bytesize_first_block;
 
   gr_fileinfo->file_header_pos = malloc(gr_fileinfo->n_blocks * sizeof(off_t));
@@ -561,9 +561,9 @@ int _guppiraw_header_put_double(guppiraw_header_llnode_t* head, const char* key,
   return _guppiraw_header_put_entry(head, _GUPPI_RAW_FTISHEADER_VALUEBUF_STR);
 }
 
-int _guppiraw_header_put_integer(guppiraw_header_llnode_t* head, const char* key, const int value) {
+int _guppiraw_header_put_integer(guppiraw_header_llnode_t* head, const char* key, const int64_t value) {
   memset(_GUPPI_RAW_FTISHEADER_VALUEBUF_STR, ' ', 80);
-  hputi4(_GUPPI_RAW_FTISHEADER_VALUEBUF_STR, key, value);
+  hputi8(_GUPPI_RAW_FTISHEADER_VALUEBUF_STR, key, value);
   return _guppiraw_header_put_entry(head, _GUPPI_RAW_FTISHEADER_VALUEBUF_STR);
 }
 
@@ -587,7 +587,7 @@ int guppiraw_header_put_double(guppiraw_header_t* header, const char* key, const
   header->n_entries += _guppiraw_header_put_double(header->head, key, value);
   return 0;
 }
-int guppiraw_header_put_integer(guppiraw_header_t* header, const char* key, const int value) {
+int guppiraw_header_put_integer(guppiraw_header_t* header, const char* key, const int64_t value) {
   _guppiraw_header_ensure_initialised(header, key);
   header->n_entries += _guppiraw_header_put_integer(header->head, key, value);
   return 0;
@@ -630,11 +630,11 @@ void guppiraw_write_block(int fd, guppiraw_header_t* header, void* data, uint32_
   off_t file_pos = lseek(fd, 0, SEEK_CUR);
   file_pos += write(fd, header_string, header_string_len);
   if(directio) {
-    file_pos += write(fd, _guppiraw_directio_padding_buffer, guppiraw_directio_align_value(file_pos) - file_pos);
+    file_pos += write(fd, _guppiraw_directio_padding_buffer, guppiraw_directio_align(file_pos) - file_pos);
   }
   file_pos += write(fd, data, block_size);
   if(directio) {
-    write(fd, _guppiraw_directio_padding_buffer, guppiraw_directio_align_value(file_pos) - file_pos);
+    write(fd, _guppiraw_directio_padding_buffer, guppiraw_directio_align(file_pos) - file_pos);
   }
   free(header_string);
 }

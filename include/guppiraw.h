@@ -112,7 +112,7 @@ int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
 int guppiraw_skim_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
 int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo);
 
-static inline off_t guppiraw_directio_align_value(off_t value) {
+static inline off_t guppiraw_directio_align(off_t value) {
   return (value + 511) & ~((off_t)511);
 }
 
@@ -120,7 +120,7 @@ static inline int guppiraw_seek_next_block(int fd, const guppiraw_block_info_t* 
   return lseek(
     fd,
     gr_blockinfo->metadata.directio == 1 ? 
-      guppiraw_directio_align_value(gr_blockinfo->file_data_pos + gr_blockinfo->metadata.datashape.block_size) :
+      guppiraw_directio_align(gr_blockinfo->file_data_pos + gr_blockinfo->metadata.datashape.block_size) :
       gr_blockinfo->file_data_pos + gr_blockinfo->metadata.datashape.block_size,
     0
   );
@@ -181,7 +181,7 @@ typedef struct {
 
 int guppiraw_header_put_string(guppiraw_header_t* header, const char* key, const char* value); 
 int guppiraw_header_put_double(guppiraw_header_t* header, const char* key, const double value); 
-int guppiraw_header_put_integer(guppiraw_header_t* header, const char* key, const int value); 
+int guppiraw_header_put_integer(guppiraw_header_t* header, const char* key, const int64_t value); 
 
 char* guppiraw_header_malloc_string(guppiraw_header_t* header);
 void guppiraw_header_free(guppiraw_header_t* header);
