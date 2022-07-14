@@ -1,13 +1,25 @@
 #include "guppiraw.h"
 #include <time.h>
 
+#define ELAPSED_NS(start,stop) \
+  (((int64_t)stop.tv_sec-start.tv_sec)*1000*1000*1000+(stop.tv_nsec-start.tv_nsec))
+
 int main(int argc, char const *argv[])
 {
-	if(argc < 2) {
-		printf("Usage: %s output_stempath.\n",argv[0]);
-		return 1;
+	char do_not_validate = 0;
+	if(argc != 2) {
+		if(!(argc == 3 && strncmp("-V", argv[1], 2) == 0)) {
+			printf(
+				"Usage: %s [options] output_stempath.\n"\
+				"options:\n"\
+				"\t-V\t\tDo not validate output.\n",
+				argv[0]
+			);
+			return 1;
+		}
+		do_not_validate = 1;
 	}
-	else if(strlen(argv[1]) > 245) {
+	else if(strlen(argv[argc-1]) > 245) {
 		printf("output_stempath length is larger than 245.\n");
 		return 1;
 	}
@@ -38,7 +50,7 @@ int main(int argc, char const *argv[])
 	void* data __attribute__ ((aligned (512))) = memalign(512, block_bytesize);
 
 	char output_filepath[256];
-	sprintf(output_filepath, "%s.0000.raw", argv[1]);
+	sprintf(output_filepath, "%s.0000.raw", argv[argc-1]);
 
 	int fd = open(output_filepath, O_WRONLY|O_CREAT|O_DIRECT, 0644);
 	if(fd < 1) {
@@ -46,29 +58,38 @@ int main(int argc, char const *argv[])
 		perror("");
 		return 1;
 	}
-	clock_t start;
-	clock_t clocks_writing = 0;
+	
+  struct timespec start, stop;
+	uint64_t writing_ns = 0;
 
 	for(; block_idx < blocks; block_idx++) {
-		for(int i = 0; i < block_bytesize/sizeof(int); i++)
-			((int*)data)[i] = rand();
+		if(!do_not_validate || block_idx == 0)
+			for(int i = 0; i < block_bytesize/sizeof(int); i++)
+				((int*)data)[i] = rand();
 		
 		guppiraw_header_put_integer(&header, "BLKIDX", block_idx);
-		start = clock();
-		guppiraw_write_block(fd, &header, data, block_bytesize, 1);
-		clocks_writing += clock() - start;
+		
+		clock_gettime(CLOCK_MONOTONIC, &start);
+			guppiraw_write_block(fd, &header, data, block_bytesize, 1);
+		clock_gettime(CLOCK_MONOTONIC, &stop);
+		writing_ns += ELAPSED_NS(start, stop);
 	}
 	close(fd);
 
 	printf(
-		"Wrote %d blocks of %ld in %f seconds: %f GB/s\n",
+		"Wrote %d blocks of %ld in %f seconds: %f GB/s.\n",
 		blocks, block_bytesize,
-		(double)clocks_writing/CLOCKS_PER_SEC,
-		((double)blocks*block_bytesize)/((double)clocks_writing*1e9/CLOCKS_PER_SEC)
+		(double)writing_ns/1e9,
+		((double)blocks*block_bytesize)/(double)writing_ns
 	);
 
+	if(do_not_validate == 1) {
+		printf("Not validating output: `%s`\n", output_filepath);
+		return 0;
+	}
+
 	guppiraw_iterate_info_t gr_iterate = {0};
-	int rv = guppiraw_iterate_open_stem(argv[1], &gr_iterate);
+	int rv = guppiraw_iterate_open_stem(argv[argc-1], &gr_iterate);
   if(rv) {
 		fprintf(stderr, "Error opening: %s.%04d.raw: %d\n", gr_iterate.stempath, gr_iterate.fileenum, rv);
 		return 1;
@@ -133,5 +154,10 @@ int main(int argc, char const *argv[])
 
 	free(data);
 	printf("Blocks incorrect: %d.\n", block_idx);
+	printf(
+		"%s output: `%s`\n",
+		block_idx == 0 ? "Valid" : "Invalid",
+		output_filepath
+	);
   return block_idx;
 }
