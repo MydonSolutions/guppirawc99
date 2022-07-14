@@ -33,10 +33,16 @@ long validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_
   const size_t bytes_per_iter = guppiraw_iterate_bytesize(gr_iterate, ntime, nchan, naspect);
 
   long bytes_invalid = repetitions*bytes_per_iter;
-  char *iterate_buffer = malloc(bytes_per_iter);
+  char *iterate_buffer __attribute__ ((aligned (512))) = memalign(
+    512,
+    guppiraw_directio_align(bytes_per_iter)
+  );
 
   const size_t nblocks = ((time_index + repeat_time*ntime + datashape->n_time-1)/datashape->n_time);
-  char *data_blocks = malloc(datashape->block_size*nblocks);
+  char *data_blocks __attribute__ ((aligned (512))) = memalign(
+    512,
+    guppiraw_directio_align(datashape->block_size*nblocks)
+  );
   
   const off_t gr_filepos = lseek(gr_iterate->fd, 0, SEEK_CUR);
 

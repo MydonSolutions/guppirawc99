@@ -209,6 +209,7 @@ int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
  *  0 : Successfully parsed the first and skimmed all the other headers in the file
  *  2 : First Header is inappropriate (missing `BLOCSIZE`)
  *  3 : Could not open the file `"%s.%04d.raw": gr_iterate->stempath, gr_iterate->fileenum`
+ *  4 : Could not open the file `"%s.%04d.raw": gr_iterate->stempath, gr_iterate->fileenum` with O_DIRECT
  *  X : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES` for Block X
  */
 int _guppiraw_iterate_open(guppiraw_iterate_info_t* gr_iterate) {
@@ -219,12 +220,20 @@ int _guppiraw_iterate_open(guppiraw_iterate_info_t* gr_iterate) {
   char* filepath = malloc(gr_iterate->stempath_len+9+1);
   sprintf(filepath, "%s.%04d.raw", gr_iterate->stempath, gr_iterate->fileenum%10000);
   gr_iterate->fd = open(filepath, O_RDONLY);
-  free(filepath);
   if(gr_iterate->fd <= 0) {
     return 3;
   }
   gr_iterate->block_index = 0;
-  return guppiraw_skim_file(gr_iterate->fd, &gr_iterate->file_info);
+  int rv = guppiraw_skim_file(gr_iterate->fd, &gr_iterate->file_info);
+  if(gr_iterate->file_info.block_info.metadata.directio) {
+    close(gr_iterate->fd);
+    gr_iterate->fd = open(filepath, O_RDONLY|O_DIRECT);
+    if(gr_iterate->fd <= 0) {
+      return 4;
+    }
+  }
+  free(filepath);
+  return rv;
 }
 
 /*
@@ -261,17 +270,6 @@ typedef struct {
   int iovec_count;
   off_t fd_offset;
 } preadv_parameters_t;
-
-
-/*
- *  block         !HEADER!_______________________________________________________________________________________________________________________!HEADER!_______________________________________________________________________________________________________________________!
- *  aspect               !___________________________________________________________!___________________________________________________________!      !___________________________________________________________!___________________________________________________________!
- *  channel              !___________________!___________________!___________________!___________________!___________________!___________________!      !___________________!___________________!___________________!___________________!___________________!___________________!
- *  time                 !___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!      !___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!___!
- *  polarization         !_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!      !_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!_!
- *  samples              !SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS!      !SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS!
- *
- */
 
 static inline long _guppiraw_read_time_span(
   const guppiraw_iterate_info_t* gr_iterate,
@@ -435,7 +433,8 @@ static inline long _guppiraw_read_time_gap(
  *  X : Bytes read 
  */
 long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer) {
-  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.metadata.datashape;
+  const guppiraw_metadata_t* metadata = &gr_iterate->file_info.block_info.metadata;  
+  const guppiraw_datashape_t* datashape = &metadata->datashape;
   if(gr_iterate->chan_index + nchan > datashape->n_aspectchan) {
     // cannot gather in channel dimension
     fprintf(stderr, "Error: cannot gather in channel dimension.\n");
@@ -474,7 +473,11 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
     ) {
       // plain and simple block verbatim read
       lseek(gr_iterate->fd, gr_iterate->file_info.file_data_pos[gr_iterate->block_index], SEEK_SET);
-      bytes_read += read(gr_iterate->fd, buffer, datashape->block_size);
+      bytes_read += read(
+        gr_iterate->fd,
+        buffer,
+        metadata->directio ? guppiraw_directio_align(datashape->block_size) : datashape->block_size
+      );
     }
     else {
       // interleave time-slice reads for different channels (maintain frequency as slowest axis)
@@ -485,6 +488,15 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
       const size_t time_step = ntime > datashape->n_time ? datashape->n_time : ntime;
 
       const size_t time_step_stride = guppiraw_iterate_bytesize(gr_iterate, time_step, chan_step, aspect_step);
+      if(metadata->directio && O_DIRECT != 0 && time_step_stride%512 != 0) {
+        fprintf(
+          stderr,
+          "DIRECTIO (%d) enabled file cannot be read in increments of %lu: (%%512 != 0)\n",
+          metadata->directio,
+          time_step_stride
+        );
+        return -1;
+      }
 
       if ((gr_iterate->time_index + ntime - 1)/datashape->n_time == 0) {
         // if time iteration spans < 1 block, iovecs striding is useless

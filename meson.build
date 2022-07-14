@@ -2,6 +2,8 @@ project('guppirawc99', 'c',
   version: '1.0',
   default_options: [
     'c_std=c99',
+    'buildtype=release',
+    'b_ndebug=if-release'
   ]
 )
 
