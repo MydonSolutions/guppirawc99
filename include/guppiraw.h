@@ -94,6 +94,7 @@ typedef struct {
 } guppiraw_block_info_t;
 
 typedef struct {
+  int fd;
   guppiraw_metadata_t metadata;
   off_t bytesize_file;
   int n_blocks;
@@ -115,7 +116,7 @@ void guppiraw_parse_blockheader_string(guppiraw_metadata_t* metadata, char* head
  */
 int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
 int guppiraw_skim_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
-int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo);
+int guppiraw_skim_file(guppiraw_file_info_t* gr_fileinfo);
 
 static inline off_t guppiraw_directio_align(off_t value) {
   return (value + 511) & ~((off_t)511);
@@ -137,12 +138,11 @@ static inline int guppiraw_read_blockdata(int fd, const guppiraw_block_info_t* g
 }
 
 typedef struct {
-  int fd;
+  guppiraw_file_info_t file_info;
+
   int fileenum;
   char* stempath;
   int stempath_len;
-
-  guppiraw_file_info_t file_info;
 
   int block_index;
   size_t time_index;

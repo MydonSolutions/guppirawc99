@@ -179,8 +179,9 @@ int guppiraw_skim_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
  *  2 : First Header is inappropriate (missing `BLOCSIZE`)
  *  X : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES` for Block X
  */
-int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
+int guppiraw_skim_file(guppiraw_file_info_t* gr_fileinfo) {
   guppiraw_block_info_t tmp_blockinfo = {0};//&gr_fileinfo->block_info;
+  int fd = gr_fileinfo->fd;
 
   gr_fileinfo->bytesize_file = lseek(fd, 0, SEEK_END);
   lseek(fd, 0, SEEK_SET);
@@ -225,22 +226,22 @@ int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
  *  X : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES` for Block X
  */
 int _guppiraw_iterate_open(guppiraw_iterate_info_t* gr_iterate) {
-  if(gr_iterate->fd > 0) {
-    close(gr_iterate->fd);
+  if(gr_iterate->file_info.fd > 0) {
+    close(gr_iterate->file_info.fd);
     gr_iterate->fileenum++;
   }
   char* filepath = malloc(gr_iterate->stempath_len+9+1);
   sprintf(filepath, "%s.%04d.raw", gr_iterate->stempath, gr_iterate->fileenum%10000);
-  gr_iterate->fd = open(filepath, O_RDONLY);
-  if(gr_iterate->fd <= 0) {
+  gr_iterate->file_info.fd = open(filepath, O_RDONLY);
+  if(gr_iterate->file_info.fd <= 0) {
     return 3;
   }
   gr_iterate->block_index = 0;
-  int rv = guppiraw_skim_file(gr_iterate->fd, &gr_iterate->file_info);
+  int rv = guppiraw_skim_file(&gr_iterate->file_info);
   if(gr_iterate->file_info.metadata.directio) {
-    close(gr_iterate->fd);
-    gr_iterate->fd = open(filepath, O_RDONLY|O_DIRECT);
-    if(gr_iterate->fd <= 0) {
+    close(gr_iterate->file_info.fd);
+    gr_iterate->file_info.fd = open(filepath, O_RDONLY|O_DIRECT);
+    if(gr_iterate->file_info.fd <= 0) {
       return 4;
     }
   }
@@ -260,9 +261,9 @@ int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr
   gr_iterate->stempath_len = strlen(filepath);
 
   // handle if filepath is not just the stempath
-  gr_iterate->fd = open(filepath, O_RDONLY);
-  if(gr_iterate->fd != -1) {
-    close(gr_iterate->fd);
+  gr_iterate->file_info.fd = open(filepath, O_RDONLY);
+  if(gr_iterate->file_info.fd != -1) {
+    close(gr_iterate->file_info.fd);
 
     // `filepath` is the `filestem.\d{4}.raw`
     gr_iterate->stempath_len = strlen(filepath)-9;
@@ -273,7 +274,7 @@ int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr
   strncpy(gr_iterate->stempath, filepath, gr_iterate->stempath_len);
   gr_iterate->stempath[gr_iterate->stempath_len] = '\0';
   
-  gr_iterate->fd = 0;
+  gr_iterate->file_info.fd = 0;
   return _guppiraw_iterate_open(gr_iterate);
 }
 
@@ -330,7 +331,7 @@ static inline long _guppiraw_read_time_span(
 
         if(pread_params.iovec_count == max_iovecs) {
           const long bytes_preadv = preadv(
-            gr_iterate->fd,
+            gr_iterate->file_info.fd,
             pread_params.iovecs,
             pread_params.iovec_count,
             pread_params.fd_offset
@@ -342,8 +343,8 @@ static inline long _guppiraw_read_time_span(
               pread_params.iovec_count,
               pread_params.fd_offset,
               bytes_preadv,
-              gr_iterate->fd,
-              lseek(gr_iterate->fd, 0, SEEK_CUR)
+              gr_iterate->file_info.fd,
+              lseek(gr_iterate->file_info.fd, 0, SEEK_CUR)
             );
             perror("");
           }
@@ -357,7 +358,7 @@ static inline long _guppiraw_read_time_span(
       // read any stragglers for this block, before fd_offset changes
       if(pread_params.iovec_count > 0) {
         const long bytes_preadv = preadv(
-          gr_iterate->fd,
+          gr_iterate->file_info.fd,
           pread_params.iovecs,
           pread_params.iovec_count,
           pread_params.fd_offset
@@ -369,8 +370,8 @@ static inline long _guppiraw_read_time_span(
             pread_params.iovec_count,
             pread_params.fd_offset,
             bytes_preadv,
-            gr_iterate->fd,
-            lseek(gr_iterate->fd, 0, SEEK_CUR)
+            gr_iterate->file_info.fd,
+            lseek(gr_iterate->file_info.fd, 0, SEEK_CUR)
           );
           perror("");
         }
@@ -405,7 +406,7 @@ static inline long _guppiraw_read_time_gap(
     for (size_t aspect_i = 0; aspect_i < aspect_steps; aspect_i++) {
       for (size_t chan_i = 0; chan_i < chan_steps; chan_i++) {
         lseek(
-          gr_iterate->fd,
+          gr_iterate->file_info.fd,
           gr_iterate->file_info.file_data_pos[gr_iterate->block_index + (time_index / datashape->n_time)] + 
             (time_index % datashape->n_time) * datashape->bytestride_time +
             (gr_iterate->chan_index + chan_i*chan_step) * datashape->bytestride_channel +
@@ -413,7 +414,7 @@ static inline long _guppiraw_read_time_gap(
           SEEK_SET
         );
         const long _bytes_read = read(
-          gr_iterate->fd,
+          gr_iterate->file_info.fd,
           buffer + 
             ((aspect_i*chan_steps + chan_i)*time_steps + time_i)*time_step_stride,
           time_step_stride
@@ -426,7 +427,7 @@ static inline long _guppiraw_read_time_gap(
             _bytes_read,
             aspect_i, chan_i, time_i,
             ((aspect_i*chan_steps + chan_i)*time_steps + time_i)*time_step_stride,
-            lseek(gr_iterate->fd, 0, SEEK_CUR),
+            lseek(gr_iterate->file_info.fd, 0, SEEK_CUR),
             gr_iterate->file_info.bytesize_file
           );
           perror("");
@@ -459,7 +460,7 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
   }
   if(gr_iterate->block_index == gr_iterate->file_info.n_blocks) {
     _guppiraw_iterate_open(gr_iterate);
-    if(gr_iterate->fd <= 0) {
+    if(gr_iterate->file_info.fd <= 0) {
       return 0;
     }
   }
@@ -484,9 +485,9 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
       gr_iterate->aspect_index == 0 && gr_iterate->chan_index == 0 && gr_iterate->time_index == 0
     ) {
       // plain and simple block verbatim read
-      lseek(gr_iterate->fd, gr_iterate->file_info.file_data_pos[gr_iterate->block_index], SEEK_SET);
+      lseek(gr_iterate->file_info.fd, gr_iterate->file_info.file_data_pos[gr_iterate->block_index], SEEK_SET);
       bytes_read += read(
-        gr_iterate->fd,
+        gr_iterate->file_info.fd,
         buffer,
         metadata->directio ? guppiraw_directio_align(datashape->block_size) : datashape->block_size
       );

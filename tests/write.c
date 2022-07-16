@@ -134,7 +134,7 @@ int main(int argc, char const *argv[])
 	}
 
 	srand(seed);
-	while(gr_iterate.fd > 0 && gr_iterate.block_index < gr_iterate.file_info.n_blocks) {
+	while(gr_iterate.file_info.fd > 0 && gr_iterate.block_index < gr_iterate.file_info.n_blocks) {
 		printf(
 			"block #%d[c=%lu,t=%lu] time=%lu, chan=%u...",
 			gr_iterate.block_index,
@@ -149,7 +149,7 @@ int main(int argc, char const *argv[])
 				"Did not correctly read block #%d: %d (fd: %d)\n\t",
 				gr_iterate.block_index-1,
 				rv,
-				gr_iterate.fd
+				gr_iterate.file_info.fd
 			);
 			perror("");
 			break;

@@ -47,17 +47,17 @@ long validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_
     guppiraw_directio_align(datashape->block_size*nblocks)
   );
   
-  const off_t gr_filepos = lseek(gr_iterate->fd, 0, SEEK_CUR);
+  const off_t gr_filepos = lseek(gr_iterate->file_info.fd, 0, SEEK_CUR);
 
   for(int block_i = 0; block_i < nblocks; block_i++) {
     lseek(
-      gr_iterate->fd,
+      gr_iterate->file_info.fd,
       gr_iterate->file_info.file_data_pos[gr_iterate->block_index + block_i],
       SEEK_SET
     );
-    read(gr_iterate->fd, data_blocks + block_i*datashape->block_size, datashape->block_size);
+    read(gr_iterate->file_info.fd, data_blocks + block_i*datashape->block_size, datashape->block_size);
   }
-  lseek(gr_iterate->fd, gr_filepos, SEEK_SET);
+  lseek(gr_iterate->file_info.fd, gr_filepos, SEEK_SET);
   
   size_t aspect_offset, chan_offset, d_t, time_offset;
   char *iterate_buffer_ptr;
@@ -128,7 +128,7 @@ long benchmark_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size
 
   size_t repitition;
   size_t rv;
-  for(repitition = 0; repitition < repetitions && gr_iterate->fd >= 0; repitition++) {
+  for(repitition = 0; repitition < repetitions && gr_iterate->file_info.fd >= 0; repitition++) {
     clock_gettime(CLOCK_MONOTONIC, &start);
       rv = guppiraw_iterate_read(
         gr_iterate,
