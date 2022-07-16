@@ -8,6 +8,9 @@ static const uint64_t KEY_UINT64_NPOL      = GUPPI_RAW_KEY_UINT64_ID_LE('N','P',
 static const uint64_t KEY_UINT64_NBITS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' ');
 static const uint64_t KEY_UINT64_DIRECTIO  = GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O');
 
+static const uint64_t KEY_UINT64_END  = GUPPI_RAW_KEY_UINT64_ID_LE('E','N','D',' ',' ',' ',' ',' ');
+static const uint64_t _UINT64_BLANK   = GUPPI_RAW_KEY_UINT64_ID_LE(' ',' ',' ',' ',' ',' ',' ',' ');
+
 static inline void _parse_entry(const char* entry, guppiraw_metadata_t* metadata) {
   if(((uint64_t*)entry)[0] == KEY_UINT64_BLOCSIZE)
     hgetu8(entry, "BLOCSIZE", &metadata->datashape.block_size);
@@ -29,16 +32,27 @@ static inline void _parse_entry(const char* entry, guppiraw_metadata_t* metadata
   }
 }
 
+static inline char _guppiraw_header_entry_is_END(const uint64_t* entry_uint64) {
+  return entry_uint64[0] == KEY_UINT64_END &&
+    entry_uint64[1] == _UINT64_BLANK &&
+    entry_uint64[2] == _UINT64_BLANK &&
+    entry_uint64[3] == _UINT64_BLANK &&
+    entry_uint64[4] == _UINT64_BLANK &&
+    entry_uint64[5] == _UINT64_BLANK &&
+    entry_uint64[6] == _UINT64_BLANK &&
+    entry_uint64[7] == _UINT64_BLANK &&
+    entry_uint64[8] == _UINT64_BLANK &&
+    entry_uint64[9] == _UINT64_BLANK;
+}
+
 void guppiraw_parse_blockheader_string(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length) {
   int32_t entry_count = 0;
   while(
-    strncmp(header_string, GUPPI_RAW_HEADER_END_STR, 80) != 0 && 
-    ((entry_count+1)*80 < header_length || header_length < 0)
+    !_guppiraw_header_entry_is_END((uint64_t*)header_string) && 
+    ((++entry_count)*80 < header_length || header_length < 0)
   ) {
-    fprintf(stderr, "%d: %s\n", entry_count, header_string);
     _parse_entry(header_string, metadata);
     header_string += 80;
-    entry_count++;
   }
 }
 
@@ -61,7 +75,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
   // with files opened with O_DIRECT.
   char entries[GUPPI_RAW_HEADER_DIGEST_BYTES] __attribute__ ((aligned (512)));
   char *entry = entries;
-  while(strncmp(entry, GUPPI_RAW_HEADER_END_STR, 80) != 0 && header_entry_count < GUPPI_RAW_HEADER_MAX_ENTRIES) {
+  while(!_guppiraw_header_entry_is_END((uint64_t*)entry) && header_entry_count < GUPPI_RAW_HEADER_MAX_ENTRIES) {
 
     if(header_entry_count%GUPPI_RAW_HEADER_DIGEST_ENTRIES == 0){
       // read GUPPI_RAW_HEADER_DIGEST_ENTRIES at a time
