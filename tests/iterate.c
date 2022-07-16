@@ -21,7 +21,7 @@ void guppiraw_parse_block_meta(const char* entry, void* block_meta) {
 }
 
 long validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_t nchan, size_t naspect, size_t repeat_time) {
-  const guppiraw_datashape_t *datashape = &gr_iterate->file_info.block_info.metadata.datashape;
+  const guppiraw_datashape_t *datashape = &gr_iterate->file_info.metadata.datashape;
 
   // validate all channels
   const size_t repeat_aspect = datashape->n_aspect/naspect;
@@ -111,7 +111,7 @@ long validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_
 }
 
 long benchmark_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_t nchan, size_t naspect, size_t repeat_time) {
-  const guppiraw_datashape_t *datashape = &gr_iterate->file_info.block_info.metadata.datashape;
+  const guppiraw_datashape_t *datashape = &gr_iterate->file_info.metadata.datashape;
   size_t bytesize = guppiraw_iterate_bytesize(gr_iterate, ntime, nchan, naspect);
 
   // validate all channels
@@ -174,8 +174,8 @@ int main(int argc, char const *argv[])
   }
 
   guppiraw_iterate_info_t gr_iterate = {0};
-  gr_iterate.file_info.block_info.metadata.user_data = malloc(sizeof(guppiraw_block_meta_t));
-  gr_iterate.file_info.block_info.metadata.user_callback = guppiraw_parse_block_meta;
+  gr_iterate.file_info.metadata.user_data = malloc(sizeof(guppiraw_block_meta_t));
+  gr_iterate.file_info.metadata.user_callback = guppiraw_parse_block_meta;
   
   if(guppiraw_iterate_open_stem(argv[argc-1], &gr_iterate)) {
     printf("Error opening: %s.%04d.raw\n", gr_iterate.stempath, gr_iterate.fileenum);
@@ -186,7 +186,7 @@ int main(int argc, char const *argv[])
   const int nfactors = sizeof(factors)/sizeof(int);
 
   size_t ntime, nchan, naspect;
-  guppiraw_datashape_t *datashape = &gr_iterate.file_info.block_info.metadata.datashape;
+  guppiraw_datashape_t *datashape = &gr_iterate.file_info.metadata.datashape;
 
   for(int multiply_not_divide = 0; multiply_not_divide <= 1; multiply_not_divide++) {
     for(int ai = 0; ai < nfactors; ai++) {

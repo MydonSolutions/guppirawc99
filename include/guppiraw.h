@@ -94,7 +94,7 @@ typedef struct {
 } guppiraw_block_info_t;
 
 typedef struct {
-  guppiraw_block_info_t block_info;
+  guppiraw_metadata_t metadata;
   off_t bytesize_file;
   int n_blocks;
   // Block-position fields
@@ -156,20 +156,20 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
 static inline long guppiraw_iterate_read_block(guppiraw_iterate_info_t* gr_iterate, void* buffer) {
   return guppiraw_iterate_read(
     gr_iterate,
-    gr_iterate->file_info.block_info.metadata.datashape.n_time,
-    gr_iterate->file_info.block_info.metadata.datashape.n_aspectchan,
-    gr_iterate->file_info.block_info.metadata.datashape.n_aspect,
+    gr_iterate->file_info.metadata.datashape.n_time,
+    gr_iterate->file_info.metadata.datashape.n_aspectchan,
+    gr_iterate->file_info.metadata.datashape.n_aspect,
     buffer
   );
 }
 
 static inline size_t guppiraw_iterate_bytesize(const guppiraw_iterate_info_t* gr_iterate, size_t ntime, size_t nchan, size_t naspect) {
-  return naspect * nchan * ntime * gr_iterate->file_info.block_info.metadata.datashape.bytestride_time;
+  return naspect * nchan * ntime * gr_iterate->file_info.metadata.datashape.bytestride_time;
 }
 
 static inline size_t guppiraw_iterate_filentime_remaining(const guppiraw_iterate_info_t* gr_iterate) {
   return (gr_iterate->file_info.n_blocks - gr_iterate->block_index)*
-    gr_iterate->file_info.block_info.metadata.datashape.n_time -
+    gr_iterate->file_info.metadata.datashape.n_time -
      gr_iterate->time_index
   ;
 }

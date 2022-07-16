@@ -180,38 +180,36 @@ int guppiraw_skim_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
  *  X : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES` for Block X
  */
 int guppiraw_skim_file(int fd, guppiraw_file_info_t* gr_fileinfo) {
-  guppiraw_block_info_t *ptr_blockinfo = &gr_fileinfo->block_info;
+  guppiraw_block_info_t tmp_blockinfo = {0};//&gr_fileinfo->block_info;
 
   gr_fileinfo->bytesize_file = lseek(fd, 0, SEEK_END);
   lseek(fd, 0, SEEK_SET);
 
-  int rv = guppiraw_read_blockheader(fd, ptr_blockinfo);
+  int rv = guppiraw_read_blockheader(fd, &tmp_blockinfo);
   if(rv){
     return rv;
   }
-  guppiraw_seek_next_block(fd, ptr_blockinfo);
-  size_t bytesize_first_block = ptr_blockinfo->file_data_pos + guppiraw_directio_align(ptr_blockinfo->metadata.datashape.block_size);
+  guppiraw_seek_next_block(fd, &tmp_blockinfo);
+  size_t bytesize_first_block = tmp_blockinfo.file_data_pos + guppiraw_directio_align(tmp_blockinfo.metadata.datashape.block_size);
   gr_fileinfo->n_blocks = (gr_fileinfo->bytesize_file + bytesize_first_block-1)/bytesize_first_block;
 
   gr_fileinfo->file_header_pos = malloc(gr_fileinfo->n_blocks * sizeof(off_t));
   gr_fileinfo->file_data_pos = malloc(gr_fileinfo->n_blocks * sizeof(off_t));
-  gr_fileinfo->file_header_pos[0] = ptr_blockinfo->file_header_pos;
-  gr_fileinfo->file_data_pos[0] = ptr_blockinfo->file_data_pos;
+  gr_fileinfo->file_header_pos[0] = tmp_blockinfo.file_header_pos;
+  gr_fileinfo->file_data_pos[0] = tmp_blockinfo.file_data_pos;
 
-  guppiraw_block_info_t temp_blockinfo;
-  ptr_blockinfo = &temp_blockinfo;
-  memcpy(ptr_blockinfo, &gr_fileinfo->block_info, sizeof(guppiraw_block_info_t));
+  memcpy(&gr_fileinfo->metadata, &tmp_blockinfo.metadata, sizeof(guppiraw_metadata_t));
 
   for(int i = 1; i < gr_fileinfo->n_blocks; i++) {
-    rv = guppiraw_skim_blockheader(fd, ptr_blockinfo);
+    rv = guppiraw_skim_blockheader(fd, &tmp_blockinfo);
     if(rv != 0) {
       rv *= i;
       gr_fileinfo->n_blocks = i;
       break;
     }
-    gr_fileinfo->file_header_pos[i] = ptr_blockinfo->file_header_pos;
-    gr_fileinfo->file_data_pos[i] = ptr_blockinfo->file_data_pos;
-    guppiraw_seek_next_block(fd, ptr_blockinfo);
+    gr_fileinfo->file_header_pos[i] = tmp_blockinfo.file_header_pos;
+    gr_fileinfo->file_data_pos[i] = tmp_blockinfo.file_data_pos;
+    guppiraw_seek_next_block(fd, &tmp_blockinfo);
   }
 
   return rv;
@@ -239,7 +237,7 @@ int _guppiraw_iterate_open(guppiraw_iterate_info_t* gr_iterate) {
   }
   gr_iterate->block_index = 0;
   int rv = guppiraw_skim_file(gr_iterate->fd, &gr_iterate->file_info);
-  if(gr_iterate->file_info.block_info.metadata.directio) {
+  if(gr_iterate->file_info.metadata.directio) {
     close(gr_iterate->fd);
     gr_iterate->fd = open(filepath, O_RDONLY|O_DIRECT);
     if(gr_iterate->fd <= 0) {
@@ -293,7 +291,7 @@ static inline long _guppiraw_read_time_span(
   const size_t time_step_stride,
   void* buffer
 ) {
-  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.metadata.datashape;
+  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.metadata.datashape;
   if(ntime <= datashape->n_time) {
     // should never happen
     fprintf(
@@ -395,7 +393,7 @@ static inline long _guppiraw_read_time_gap(
   const size_t time_step_stride,
   void* buffer
 ) {
-  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.block_info.metadata.datashape;
+  const guppiraw_datashape_t* datashape = &gr_iterate->file_info.metadata.datashape;
   
   const size_t aspect_steps = naspect/aspect_step;
   const size_t chan_steps = nchan/chan_step;
@@ -447,7 +445,7 @@ static inline long _guppiraw_read_time_gap(
  *  X : Bytes read 
  */
 long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer) {
-  const guppiraw_metadata_t* metadata = &gr_iterate->file_info.block_info.metadata;  
+  const guppiraw_metadata_t* metadata = &gr_iterate->file_info.metadata;  
   const guppiraw_datashape_t* datashape = &metadata->datashape;
   if(gr_iterate->chan_index + nchan > datashape->n_aspectchan) {
     // cannot gather in channel dimension

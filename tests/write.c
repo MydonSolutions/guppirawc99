@@ -35,7 +35,8 @@ int main(int argc, char const *argv[])
 
 	const int64_t block_bytesize = (n_ant*n_chan_perant*n_time*n_pols*2*n_bits)/8;
 	int block_idx = 0;
-	const int blocks = 32;
+	const int blocks = 36;
+	const int blocks_per_file = 36;
 
 	guppiraw_header_t header = {0};
 	guppiraw_header_put_integer(&header, "NBITS", n_bits);
@@ -49,8 +50,10 @@ int main(int argc, char const *argv[])
 
 	void* data __attribute__ ((aligned (512))) = memalign(512, block_bytesize);
 
+	int file_enum = 0;
 	char output_filepath[256];
-	sprintf(output_filepath, "%s.0000.raw", argv[argc-1]);
+	sprintf(output_filepath, "%s.%04d.raw", argv[argc-1], file_enum++);
+	printf("Opening '%s'\n", output_filepath);
 
 	int fd = open(output_filepath, O_WRONLY|O_CREAT|O_DIRECT, 0644);
 	if(fd < 1) {
@@ -63,6 +66,18 @@ int main(int argc, char const *argv[])
 	uint64_t writing_ns = 0;
 
 	for(; block_idx < blocks; block_idx++) {
+		if(block_idx > 0 && block_idx % blocks_per_file == 0) {
+			printf("Closing '%s' at block #%02d...", output_filepath, block_idx);
+			close(fd);
+			sprintf(output_filepath, "%s.%04d.raw", argv[argc-1], file_enum++);
+			printf("Opening '%s'.\n", output_filepath);
+			fd = open(output_filepath, O_WRONLY|O_CREAT|O_DIRECT, 0644);
+			if(fd < 1) {
+				fprintf(stderr, "Could not write to '%s': %d\n\t", output_filepath, fd);
+				perror("");
+				return 1;
+			}
+		}
 		if(!do_not_validate || block_idx == 0)
 			for(int i = 0; i < block_bytesize/sizeof(int); i++)
 				((int*)data)[i] = rand();
@@ -74,6 +89,7 @@ int main(int argc, char const *argv[])
 		clock_gettime(CLOCK_MONOTONIC, &stop);
 		writing_ns += ELAPSED_NS(start, stop);
 	}
+	printf("Closing '%s'\n", output_filepath);
 	close(fd);
 
 	printf(
@@ -94,7 +110,7 @@ int main(int argc, char const *argv[])
 		fprintf(stderr, "Error opening: %s.%04d.raw: %d\n", gr_iterate.stempath, gr_iterate.fileenum, rv);
 		return 1;
 	}
-	guppiraw_metadata_t* metadata = &gr_iterate.file_info.block_info.metadata;
+	guppiraw_metadata_t* metadata = &gr_iterate.file_info.metadata;
 	printf("\nRead datashape:\n");
 	printf("\tblock_bytesize: %lu\n", metadata->datashape.block_size);
 	printf("\tdirectio: %d\n", metadata->directio);
@@ -159,5 +175,5 @@ int main(int argc, char const *argv[])
 		block_idx == 0 ? "Valid" : "Invalid",
 		output_filepath
 	);
-  return block_idx;
+  return block_idx == 0;
 }

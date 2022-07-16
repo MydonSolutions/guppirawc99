@@ -7,7 +7,7 @@ int main(int argc, char const *argv[])
 {
   if (argc > 1){
     guppiraw_file_info_t gr_fileinfo = {0};
-    guppiraw_metadata_t* metadata = &gr_fileinfo.block_info.metadata;
+    guppiraw_metadata_t* metadata = &gr_fileinfo.metadata;
 
     int raw_fd = open(argv[1], O_RDONLY);
     clock_t start = clock();
@@ -24,17 +24,18 @@ int main(int argc, char const *argv[])
     printf("\tn_time: %lu\n", metadata->datashape.n_time);
     
     lseek(raw_fd, gr_fileinfo.file_header_pos[gr_fileinfo.n_blocks-1], SEEK_SET);
-    guppiraw_read_blockheader(raw_fd, &gr_fileinfo.block_info);
+    guppiraw_block_info_t block_info = {0};
+    guppiraw_read_blockheader(raw_fd, &block_info);
     printf("Last block info:\n");
-    printf("\tblock_size: %lu\n", metadata->datashape.block_size);
-    printf("\tdirectio: %d\n", metadata->directio);
-    printf("\tn_obschan: %u\n", metadata->datashape.n_obschan);
-    printf("\tn_pol: %u\n", metadata->datashape.n_pol);
-    printf("\tn_bit: %u\n", metadata->datashape.n_bit);
-    printf("\tn_time: %lu\n", metadata->datashape.n_time);
+    printf("\tblock_size: %lu\n", block_info.metadata.datashape.block_size);
+    printf("\tdirectio: %d\n", block_info.metadata.directio);
+    printf("\tn_obschan: %u\n", block_info.metadata.datashape.n_obschan);
+    printf("\tn_pol: %u\n", block_info.metadata.datashape.n_pol);
+    printf("\tn_bit: %u\n", block_info.metadata.datashape.n_bit);
+    printf("\tn_time: %lu\n", block_info.metadata.datashape.n_time);
 
-    guppiraw_seek_next_block(raw_fd, &gr_fileinfo.block_info);
-    assert(guppiraw_read_blockheader(raw_fd, &gr_fileinfo.block_info) == -1);
+    guppiraw_seek_next_block(raw_fd, &block_info);
+    assert(guppiraw_read_blockheader(raw_fd, &block_info) == -1);
 
     close(raw_fd);
   }
