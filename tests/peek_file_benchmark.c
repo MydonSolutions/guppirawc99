@@ -15,7 +15,7 @@ int main(int argc, char const *argv[])
     double elapsed_s = (double)(clock() - start)/ CLOCKS_PER_SEC;
 
     printf("file_size: %lu (%f GB/s)\n", gr_fileinfo.bytesize_file, gr_fileinfo.bytesize_file/(elapsed_s * 1e9));
-    printf("number of blocks: %d\n", gr_fileinfo.n_blocks);
+    printf("number of blocks: %d\n", gr_fileinfo.n_block);
     printf("\tblock_size: %lu\n", metadata->datashape.block_size);
     printf("\tdirectio: %d\n", metadata->directio);
     printf("\tn_obschan: %u\n", metadata->datashape.n_obschan);
@@ -23,7 +23,7 @@ int main(int argc, char const *argv[])
     printf("\tn_bit: %u\n", metadata->datashape.n_bit);
     printf("\tn_time: %lu\n", metadata->datashape.n_time);
     
-    lseek(gr_fileinfo.fd, gr_fileinfo.file_header_pos[gr_fileinfo.n_blocks-1], SEEK_SET);
+    lseek(gr_fileinfo.fd, gr_fileinfo.file_header_pos[gr_fileinfo.n_block-1], SEEK_SET);
     guppiraw_block_info_t block_info = {0};
     guppiraw_read_blockheader(gr_fileinfo.fd, &block_info);
     printf("Last block info:\n");

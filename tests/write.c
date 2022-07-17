@@ -119,12 +119,12 @@ int main(int argc, char const *argv[])
 	printf("\tn_bit: %u\n", metadata->datashape.n_bit);
 	printf("\tn_time: %lu\n", metadata->datashape.n_time);
 
-	printf("Number of blocks in file: %d\n", gr_iterate.file_info.n_blocks);
-	if(gr_iterate.file_info.n_blocks != blocks) {
+	printf("Number of blocks in file: %d\n", gr_iterate.file_info.n_block);
+	if(gr_iterate.file_info.n_block != blocks) {
 		return 1;
 	}
 
-	for(int i = 0; i < gr_iterate.file_info.n_blocks; i++) {
+	for(int i = 0; i < gr_iterate.file_info.n_block; i++) {
 		printf(
 			"\tblock#%d: header @ %ld, data @ %ld\n",
 			i,
@@ -134,7 +134,7 @@ int main(int argc, char const *argv[])
 	}
 
 	srand(seed);
-	while(gr_iterate.file_info.fd > 0 && gr_iterate.block_index < gr_iterate.file_info.n_blocks) {
+	while(gr_iterate.file_info.fd > 0 && gr_iterate.block_index < gr_iterate.file_info.n_block) {
 		printf(
 			"block #%d[c=%lu,t=%lu] time=%lu, chan=%u...",
 			gr_iterate.block_index,

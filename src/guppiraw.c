@@ -192,20 +192,20 @@ int guppiraw_skim_file(guppiraw_file_info_t* gr_fileinfo) {
   }
   guppiraw_seek_next_block(fd, &tmp_blockinfo);
   size_t bytesize_first_block = tmp_blockinfo.file_data_pos + guppiraw_directio_align(tmp_blockinfo.metadata.datashape.block_size);
-  gr_fileinfo->n_blocks = (gr_fileinfo->bytesize_file + bytesize_first_block-1)/bytesize_first_block;
+  gr_fileinfo->n_block = (gr_fileinfo->bytesize_file + bytesize_first_block-1)/bytesize_first_block;
 
-  gr_fileinfo->file_header_pos = malloc(gr_fileinfo->n_blocks * sizeof(off_t));
-  gr_fileinfo->file_data_pos = malloc(gr_fileinfo->n_blocks * sizeof(off_t));
+  gr_fileinfo->file_header_pos = malloc(gr_fileinfo->n_block * sizeof(off_t));
+  gr_fileinfo->file_data_pos = malloc(gr_fileinfo->n_block * sizeof(off_t));
   gr_fileinfo->file_header_pos[0] = tmp_blockinfo.file_header_pos;
   gr_fileinfo->file_data_pos[0] = tmp_blockinfo.file_data_pos;
 
   memcpy(&gr_fileinfo->metadata, &tmp_blockinfo.metadata, sizeof(guppiraw_metadata_t));
 
-  for(int i = 1; i < gr_fileinfo->n_blocks; i++) {
+  for(int i = 1; i < gr_fileinfo->n_block; i++) {
     rv = guppiraw_skim_blockheader(fd, &tmp_blockinfo);
     if(rv != 0) {
       rv *= i;
-      gr_fileinfo->n_blocks = i;
+      gr_fileinfo->n_block = i;
       break;
     }
     gr_fileinfo->file_header_pos[i] = tmp_blockinfo.file_header_pos;
@@ -458,7 +458,7 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
     fprintf(stderr, "Error: cannot gather in aspect dimension.\n");
     return -1;
   }
-  if(gr_iterate->block_index == gr_iterate->file_info.n_blocks) {
+  if(gr_iterate->block_index == gr_iterate->file_info.n_block) {
     _guppiraw_iterate_open(gr_iterate);
     if(gr_iterate->file_info.fd <= 0) {
       return 0;
@@ -470,7 +470,7 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
     fprintf(
       stderr,
       "Error: remaining file_ntime (%d*%lu-%lu) is less than iteration time (%lu).\n",
-      (gr_iterate->file_info.n_blocks - gr_iterate->block_index),
+      (gr_iterate->file_info.n_block - gr_iterate->block_index),
       gr_iterate->time_index,
       datashape->n_time,
       ntime
