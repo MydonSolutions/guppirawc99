@@ -57,11 +57,11 @@ DIRECTIO | Header and Data are DIRECTIO (512) aligned with padding, or not. `int
 Both the [`write`](./tests/write.c) and [`iterate`](./tests/iterate.c) test executables accept a `-V` option to instead benchmark writing and read-iterating through files, respectively.
 
 The test rig is an `AMD EPYC 7352 24-Core Processor` machine, with 4 `TOSHIBA MQ01ABD1` NVMe drives in Raid0, `xfs` formatted.
-It measured **roughly 8.7 GB/s when writing a 33 GB DIRECTIO file**.
+It measured **roughly 8.7 GB/s when writing a 33 GB DIRECTIO stem, over 4 files**.
 
-The read-iterate benchmark is more complicated, owing to the fact that iteration-datashapes are configurable. The benchmark, on the same 33 GB DIRECTIO file, is captured in [text](./benchmarks/iterate.txt) and further plotted below.
+The read-iterate benchmark is more complicated, owing to the fact that iteration-datashapes are configurable. The benchmark, on the same 33 GB DIRECTIO stem, is captured in [text](./benchmarks/iterate.txt) and further plotted below.
 - Iteration block-shapes with a time-dimension less than that of the blocks in the file have a drastically lower throughput.  
-- Iteration block-shapes with a time-dimension greater than or equal to that of the blocks in the file have a stable throughput between **8 and 10 GB/s**.
+- Iteration block-shapes with a time-dimension greater than or equal to that of the blocks in the file have a stable throughput between **6 and 10 GB/s**, while lower aspect-channel ratios have higher throughput than those closer to `1.0`.
 
 ![Read-Iterate Benchmarks Plot](./benchmarks/iterate_benchmark.png)
 

@@ -19,7 +19,7 @@ with open('./iterate.txt', 'r') as fio:
 # Creating figure
 fig = plt.figure(figsize =(12, 9))
 ax = plt.axes(projection ='3d')
-ax.view_init(50, -50)
+ax.view_init(40, -40)
 
 cmap = plt.get_cmap('hot')
  
@@ -29,12 +29,12 @@ trisurf = ax.plot_trisurf(
   cmap = cmap,
   linewidth = 0.2, antialiased = True
 )
-fig.colorbar(trisurf, ax = ax, shrink = 0.5, aspect = 5)
+fig.colorbar(trisurf, ax = ax, shrink = 0.5, aspect = 8, pad = 0.105)
 ax.set_title('Iteration Throughput for Different Time/Channel Steps (All aspects)')
  
 # Adding labels
 ax.set_xlabel('Time Ratio (time_iter/NTIME)', fontweight ='bold')
-ax.set_ylabel('Channel Ratio (chan_iter/OBSNCHAN)', fontweight ='bold')
+ax.set_ylabel('Channel Ratio (chan_iter/NCHAN)', fontweight ='bold')
 ax.set_zlabel('Throughput (GB/s)', fontweight ='bold')
 
 plt.savefig(f"iterate_benchmark.png")
