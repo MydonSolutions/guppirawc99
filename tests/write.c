@@ -25,7 +25,6 @@ int main(int argc, char const *argv[])
 	}
 
 	unsigned int seed = time(NULL);
-	srand(seed);
 
 	const int64_t n_bits = 4;
 	const int64_t n_pols = 512; // ensure each time index is 512 bytes, directio aligned
@@ -36,7 +35,7 @@ int main(int argc, char const *argv[])
 	const int64_t block_bytesize = (n_ant*n_chan_perant*n_time*n_pols*2*n_bits)/8;
 	int block_idx = 0;
 	const int blocks = 36;
-	const int blocks_per_file = 36;
+	const int blocks_per_file = 11;
 
 	guppiraw_header_t header = {0};
 	guppiraw_header_put_integer(&header, "NBITS", n_bits);
@@ -78,18 +77,21 @@ int main(int argc, char const *argv[])
 				return 1;
 			}
 		}
-		if(!do_not_validate || block_idx == 0)
+		if(!do_not_validate || block_idx == 0) {
+			srand(seed + block_idx);
+			guppiraw_header_put_integer(&header, "BLOCSEED", seed + block_idx);
 			for(int i = 0; i < block_bytesize/sizeof(int); i++)
 				((int*)data)[i] = rand();
+		}
 		
-		guppiraw_header_put_integer(&header, "BLKIDX", block_idx);
+		guppiraw_header_put_integer(&header, "BLOCIDX", block_idx);
 		
 		clock_gettime(CLOCK_MONOTONIC, &start);
 			guppiraw_write_block(fd, &header, data, block_bytesize, 1);
 		clock_gettime(CLOCK_MONOTONIC, &stop);
 		writing_ns += ELAPSED_NS(start, stop);
 	}
-	printf("Closing '%s'\n", output_filepath);
+	printf("Closing '%s' at block #%02d.\n", output_filepath, block_idx);
 	close(fd);
 
 	printf(
@@ -105,12 +107,13 @@ int main(int argc, char const *argv[])
 	}
 
 	guppiraw_iterate_info_t gr_iterate = {0};
-	int rv = guppiraw_iterate_open_stem(argv[argc-1], &gr_iterate);
+	int rv = guppiraw_iterate_open(&gr_iterate, argv[argc-1]);
   if(rv) {
-		fprintf(stderr, "Error opening: %s.%04d.raw: %d\n", gr_iterate.stempath, gr_iterate.fileenum, rv);
+		fprintf(stderr, "Error opening: %s.%04d.raw: %d\n", gr_iterate.stempath, gr_iterate.n_file, rv);
 		return 1;
 	}
-	guppiraw_metadata_t* metadata = &gr_iterate.file_info.metadata;
+
+	guppiraw_metadata_t* metadata = guppiraw_iterate_metadata(&gr_iterate);
 	printf("\nRead datashape:\n");
 	printf("\tblock_bytesize: %lu\n", metadata->datashape.block_size);
 	printf("\tdirectio: %d\n", metadata->directio);
@@ -119,37 +122,39 @@ int main(int argc, char const *argv[])
 	printf("\tn_bit: %u\n", metadata->datashape.n_bit);
 	printf("\tn_time: %lu\n", metadata->datashape.n_time);
 
-	printf("Number of blocks in file: %d\n", gr_iterate.file_info.n_block);
-	if(gr_iterate.file_info.n_block != blocks) {
+	printf("Number of blocks in stem: %d (over %d files)\n", gr_iterate.n_block, gr_iterate.n_file);
+
+	for(int i = 0; i < gr_iterate.n_block; i++) {
+		int block_index = i;
+		int file_index = guppiraw_iterate_file_index_of_block(&gr_iterate, &block_index);
+		printf(
+			"\tblock#%d: file #%d(block #%d, header @ %ld, data @ %ld)\n",
+			i, file_index, block_index,
+			gr_iterate.file_info[file_index].file_header_pos[block_index],
+			gr_iterate.file_info[file_index].file_data_pos[block_index]
+		);
+	}
+	if(gr_iterate.n_block != blocks) {
 		return 1;
 	}
 
-	for(int i = 0; i < gr_iterate.file_info.n_block; i++) {
+	while(gr_iterate.block_index < gr_iterate.n_block) {
 		printf(
-			"\tblock#%d: header @ %ld, data @ %ld\n",
-			i,
-			gr_iterate.file_info.file_header_pos[i],
-			gr_iterate.file_info.file_data_pos[i]
-		);
-	}
-
-	srand(seed);
-	while(gr_iterate.file_info.fd > 0 && gr_iterate.block_index < gr_iterate.file_info.n_block) {
-		printf(
-			"block #%d[c=%lu,t=%lu] time=%lu, chan=%u...",
+			"block #%d[f=%d,a=%lu,c=%lu,t=%lu] time=%lu, chan=%u, aspect=%u...",
 			gr_iterate.block_index,
-			gr_iterate.chan_index, gr_iterate.time_index,
+			gr_iterate.file_index,gr_iterate.aspect_index,gr_iterate.chan_index, gr_iterate.time_index,
 			metadata->datashape.n_time,
-			metadata->datashape.n_obschan
+			metadata->datashape.n_aspectchan,
+			metadata->datashape.n_aspect
 		);
 
+		srand(seed + gr_iterate.block_index);
 		int rv = guppiraw_iterate_read_block(&gr_iterate, data);
 		if(rv != metadata->datashape.block_size) {
 			fprintf(stderr,
-				"Did not correctly read block #%d: %d (fd: %d)\n\t",
+				"Did not correctly read block #%d: %d\n\t",
 				gr_iterate.block_index-1,
-				rv,
-				gr_iterate.file_info.fd
+				rv
 			);
 			perror("");
 			break;
@@ -161,19 +166,21 @@ int main(int argc, char const *argv[])
 		
 		if(bytes_wrong == 0){
 			block_idx--;
-			printf( "correct!\n");
+			printf("correct!\n");
 		}
 		else {
-			fprintf(stderr, "wrong!\n");
+			printf("wrong!\n");
 		}
 	}
 
+	guppiraw_iterate_close(&gr_iterate);
 	free(data);
+
 	printf("Blocks incorrect: %d.\n", block_idx);
 	printf(
 		"%s output: `%s`\n",
 		block_idx == 0 ? "Valid" : "Invalid",
 		output_filepath
 	);
-  return block_idx == 0;
+  return block_idx != 0;
 }

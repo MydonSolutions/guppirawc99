@@ -21,7 +21,7 @@ void guppiraw_parse_block_meta(const char* entry, void* block_meta) {
 }
 
 long validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_t nchan, size_t naspect, size_t repeat_time) {
-  const guppiraw_datashape_t *datashape = &gr_iterate->file_info.metadata.datashape;
+  const guppiraw_datashape_t *datashape = guppiraw_iterate_datashape(gr_iterate);
 
   // validate all channels
   const size_t repeat_aspect = datashape->n_aspect/naspect;
@@ -47,17 +47,18 @@ long validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_
     guppiraw_directio_align(datashape->block_size*nblocks)
   );
   
-  const off_t gr_filepos = lseek(gr_iterate->file_info.fd, 0, SEEK_CUR);
-
+  guppiraw_file_info_t *file_info;
+  int fileblock_indexoffset;
   for(int block_i = 0; block_i < nblocks; block_i++) {
+    fileblock_indexoffset = block_i;
+    file_info = guppiraw_iterate_file_info_of_block_offset(gr_iterate, &fileblock_indexoffset);
     lseek(
-      gr_iterate->file_info.fd,
-      gr_iterate->file_info.file_data_pos[gr_iterate->block_index + block_i],
+      file_info->fd,
+      guppiraw_file_data_pos_offset(file_info, fileblock_indexoffset),
       SEEK_SET
     );
-    read(gr_iterate->file_info.fd, data_blocks + block_i*datashape->block_size, datashape->block_size);
+    read(file_info->fd, data_blocks + block_i*datashape->block_size, datashape->block_size);
   }
-  lseek(gr_iterate->file_info.fd, gr_filepos, SEEK_SET);
   
   size_t aspect_offset, chan_offset, d_t, time_offset;
   char *iterate_buffer_ptr;
@@ -111,7 +112,7 @@ long validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_
 }
 
 long benchmark_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_t nchan, size_t naspect, size_t repeat_time) {
-  const guppiraw_datashape_t *datashape = &gr_iterate->file_info.metadata.datashape;
+  const guppiraw_datashape_t *datashape = guppiraw_iterate_datashape(gr_iterate);
   size_t bytesize = guppiraw_iterate_bytesize(gr_iterate, ntime, nchan, naspect);
 
   // validate all channels
@@ -128,7 +129,7 @@ long benchmark_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size
 
   size_t repitition;
   size_t rv;
-  for(repitition = 0; repitition < repetitions && gr_iterate->file_info.fd >= 0; repitition++) {
+  for(repitition = 0; repitition < repetitions && gr_iterate->block_index <= gr_iterate->n_block; repitition++) {
     clock_gettime(CLOCK_MONOTONIC, &start);
       rv = guppiraw_iterate_read(
         gr_iterate,
@@ -174,11 +175,9 @@ int main(int argc, char const *argv[])
   }
 
   guppiraw_iterate_info_t gr_iterate = {0};
-  gr_iterate.file_info.metadata.user_data = malloc(sizeof(guppiraw_block_meta_t));
-  gr_iterate.file_info.metadata.user_callback = guppiraw_parse_block_meta;
   
-  if(guppiraw_iterate_open_stem(argv[argc-1], &gr_iterate)) {
-    printf("Error opening: %s.%04d.raw\n", gr_iterate.stempath, gr_iterate.fileenum);
+  if(guppiraw_iterate_open_with_user_metadata(&gr_iterate, argv[argc-1], sizeof(guppiraw_block_meta_t), guppiraw_parse_block_meta)) {
+    printf("Error opening: %s.%04d.raw\n", gr_iterate.stempath, gr_iterate.fileenum_offset);
     return 1;
   }
 
@@ -186,7 +185,7 @@ int main(int argc, char const *argv[])
   const int nfactors = sizeof(factors)/sizeof(int);
 
   size_t ntime, nchan, naspect;
-  guppiraw_datashape_t *datashape = &gr_iterate.file_info.metadata.datashape;
+  guppiraw_datashape_t *datashape = guppiraw_iterate_datashape(&gr_iterate);
 
   for(int multiply_not_divide = 0; multiply_not_divide <= 1; multiply_not_divide++) {
     for(int ai = 0; ai < nfactors; ai++) {
@@ -203,13 +202,17 @@ int main(int argc, char const *argv[])
 
                 // Read at least 2 blocks, all channels, each time.
                 const size_t time_repetitions = multiply_not_divide ? 2 : 2*factors[ti];
-                if(ntime*time_repetitions > guppiraw_iterate_filentime_remaining(&gr_iterate)) {
+                if(ntime*time_repetitions > guppiraw_iterate_ntime_remaining(&gr_iterate)) {
                   // Reset to beginning of file
-                  printf("Resetting iterations to beginning of file!\n");
+                  printf("Resetting iterations to beginning of stem!\n");
                   gr_iterate.block_index = 0;
+                  for(int fi = 0; fi < gr_iterate.n_file; fi++) {
+                    gr_iterate.file_info[fi].block_index = 0;
+                  }
+                  gr_iterate.file_index = 0;
                 }
                 printf(
-                  "Iteration (x%lu full bands): block #%d[a=%lu,c=%lu,t=%lu] time=%lu/%lu, chan=%lu/%u, aspect=%lu/%u...",
+                  "Iteration (x%lu full bands):\tblock #%d[a=%lu,c=%lu,t=%lu] time=%lu/%lu, chan=%lu/%u, aspect=%lu/%u...",
                   time_repetitions,
                   gr_iterate.block_index,
                   gr_iterate.aspect_index, gr_iterate.chan_index, gr_iterate.time_index,

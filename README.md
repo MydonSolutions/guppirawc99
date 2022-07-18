@@ -26,10 +26,11 @@ DIRECTIO | Header and Data are DIRECTIO (512) aligned with padding, or not. `int
 **Key features are**:
 - multi-aspect files (antenna or beams)
 - iteration of the data in user-defined, dynamic `[n_aspect, n_chan, n_time]` chunks
-- automatic O_DIRECT inference based on DIRECTIO
+- automatic O_DIRECT inference based on DIRECTIO key-value
 - standardised calculation of various block's data-shape values
 - header parsing in a single-pass
 - user-callback for header entry parsing
+- file boundary transparency
 
 ## Compilation
 

@@ -74,6 +74,8 @@ typedef struct {
   size_t bytestride_aspect;
 } guppiraw_datashape_t;
 
+typedef void (*guppiraw_header_entry_parser)(const char* entry, void* user_data);
+
 typedef struct {
   // Header populated fields
   int directio;
@@ -81,7 +83,7 @@ typedef struct {
   guppiraw_datashape_t datashape;
 
   // User data
-  void (*user_callback)(const char* entry, void* user_data);
+  guppiraw_header_entry_parser user_callback;
   void* user_data;
 } guppiraw_metadata_t;
 
@@ -97,11 +99,21 @@ typedef struct {
   int fd;
   guppiraw_metadata_t metadata;
   off_t bytesize_file;
-  int n_blocks;
+
+  int n_block;
+  int block_index;
+
   // Block-position fields
   off_t *file_header_pos;
   off_t *file_data_pos;
 } guppiraw_file_info_t;
+
+#define guppiraw_file_ntime_remaining(gr_file)\
+  ((gr_file->n_block - gr_file->block_index) * gr_file->metadata.datashape.n_time)
+
+#define guppiraw_file_data_pos(gr_file, block_index) gr_file->file_data_pos[block_index]
+#define guppiraw_file_data_pos_offset(gr_file, block_offset) guppiraw_file_data_pos(gr_file, gr_file->block_index + block_offset)
+#define guppiraw_file_data_pos_current(gr_file) guppiraw_file_data_pos_offset(gr_file, 0)
 
 // Negative `header_length` indicates no hard limit on `header_string` length
 void guppiraw_parse_blockheader_string(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length);
@@ -138,40 +150,63 @@ static inline int guppiraw_read_blockdata(int fd, const guppiraw_block_info_t* g
 }
 
 typedef struct {
-  guppiraw_file_info_t file_info;
-
-  int fileenum;
   char* stempath;
   int stempath_len;
+  int fileenum_offset;
+  
+  guppiraw_file_info_t* file_info;
+  int n_file;
+  int file_index;
 
+  // over all files
+  int n_block;
   int block_index;
+
   size_t time_index;
   size_t chan_index;
   size_t aspect_index;
 } guppiraw_iterate_info_t;
 
-int guppiraw_iterate_open_stem(const char* filepath, guppiraw_iterate_info_t* gr_iterate);
+int guppiraw_iterate_open_with_user_metadata(
+  guppiraw_iterate_info_t* gr_iterate,
+  const char* filepath,
+  size_t user_datasize,
+  guppiraw_header_entry_parser user_callback
+);
+#define guppiraw_iterate_open(gr_iterate, filepath) guppiraw_iterate_open_with_user_metadata(gr_iterate, filepath, 0, NULL)
+
 long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer);
+void guppiraw_iterate_close(guppiraw_iterate_info_t* gr_iterate);
+
+#define guppiraw_iterate_file_info(gr_iterate, index) (gr_iterate->file_info + (index))
+#define guppiraw_iterate_file_info_offset(gr_iterate, offset) guppiraw_iterate_file_info(gr_iterate, gr_iterate->file_index + offset)
+#define guppiraw_iterate_file_info_current(gr_iterate) guppiraw_iterate_file_info_offset(gr_iterate, 0)
+
+#define guppiraw_iterate_metadata(/* const guppiraw_iterate_info_t* */ gr_iterate) (&((gr_iterate)->file_info[0].metadata))
+#define guppiraw_iterate_datashape(/* const guppiraw_iterate_info_t* */ gr_iterate) (&((gr_iterate)->file_info[0].metadata.datashape))
+
+int guppiraw_iterate_file_index_of_block(const guppiraw_iterate_info_t* gr_iterate, int* block_index);
+int guppiraw_iterate_file_index_of_block_offset(const guppiraw_iterate_info_t* gr_iterate, int* block_index);
+
+guppiraw_file_info_t* guppiraw_iterate_file_info_of_block(const guppiraw_iterate_info_t* gr_iterate, int* block_index);
+guppiraw_file_info_t* guppiraw_iterate_file_info_of_block_offset(const guppiraw_iterate_info_t* gr_iterate, int* block_index);
 
 static inline long guppiraw_iterate_read_block(guppiraw_iterate_info_t* gr_iterate, void* buffer) {
   return guppiraw_iterate_read(
     gr_iterate,
-    gr_iterate->file_info.metadata.datashape.n_time,
-    gr_iterate->file_info.metadata.datashape.n_aspectchan,
-    gr_iterate->file_info.metadata.datashape.n_aspect,
+    guppiraw_iterate_datashape(gr_iterate)->n_time,
+    guppiraw_iterate_datashape(gr_iterate)->n_aspectchan,
+    guppiraw_iterate_datashape(gr_iterate)->n_aspect,
     buffer
   );
 }
 
 static inline size_t guppiraw_iterate_bytesize(const guppiraw_iterate_info_t* gr_iterate, size_t ntime, size_t nchan, size_t naspect) {
-  return naspect * nchan * ntime * gr_iterate->file_info.metadata.datashape.bytestride_time;
+  return naspect * nchan * ntime * guppiraw_iterate_file_info_current(gr_iterate)->metadata.datashape.bytestride_time;
 }
 
-static inline size_t guppiraw_iterate_filentime_remaining(const guppiraw_iterate_info_t* gr_iterate) {
-  return (gr_iterate->file_info.n_blocks - gr_iterate->block_index)*
-    gr_iterate->file_info.metadata.datashape.n_time -
-     gr_iterate->time_index
-  ;
+static inline size_t guppiraw_iterate_ntime_remaining(const guppiraw_iterate_info_t* gr_iterate) {
+  return (gr_iterate->n_block - gr_iterate->block_index)*guppiraw_iterate_datashape(gr_iterate)->n_time - gr_iterate->time_index;
 }
 
 typedef struct guppiraw_header_llnode {
