@@ -181,6 +181,10 @@ int main(int argc, char const *argv[])
     return 1;
   }
 
+  assert(
+    abs(((guppiraw_block_meta_t*)guppiraw_iterate_metadata(&gr_iterate)->user_data)->chan_bw - 3.1415926535) < 1e-3
+  );
+
   const int factors[] = {1, 2, 3, 4, 5, 7, 8, 16};
   const int nfactors = sizeof(factors)/sizeof(int);
 

@@ -181,6 +181,8 @@ int guppiraw_skim_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
  */
 int guppiraw_skim_file(guppiraw_file_info_t* gr_fileinfo) {
   guppiraw_block_info_t tmp_blockinfo = {0};
+  tmp_blockinfo.metadata.user_data = gr_fileinfo->metadata.user_data;
+  tmp_blockinfo.metadata.user_callback = gr_fileinfo->metadata.user_callback;
   const int fd = gr_fileinfo->fd;
 
   gr_fileinfo->bytesize_file = lseek(fd, 0, SEEK_END);
