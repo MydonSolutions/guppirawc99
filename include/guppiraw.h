@@ -17,103 +17,12 @@
 #include <limits.h>
 
 #include "fitsheader.h"
-
-#define GUPPI_RAW_HEADER_MAX_ENTRIES 2048
-#define GUPPI_RAW_HEADER_DIGEST_BYTES 5*4096 // LCM(80, 4096)
-#define GUPPI_RAW_HEADER_DIGEST_ENTRIES (GUPPI_RAW_HEADER_DIGEST_BYTES/80)
-#define GUPPI_RAW_HEADER_END_STR \
-"END                                                                             "
-
-#define GUPPI_RAW_KEY_UINT64_ID_BE(c0,c1,c2,c3,c4,c5,c6,c7) \
-  (\
-  (((uint64_t)c0)<<56) + \
-  (((uint64_t)c1)<<48) + \
-  (((uint64_t)c2)<<40) + \
-  (((uint64_t)c3)<<32) + \
-  (((uint64_t)c4)<<24) + \
-  (((uint64_t)c5)<<16) + \
-  (((uint64_t)c6)<<8) + \
-  ((uint64_t)c7)\
-  )
-
-#define GUPPI_RAW_KEY_UINT64_ID_LE(c0,c1,c2,c3,c4,c5,c6,c7) \
-  (uint64_t)(\
-  ((uint64_t)c0) + \
-  (((uint64_t)c1)<<8) + \
-  (((uint64_t)c2)<<16) + \
-  (((uint64_t)c3)<<24) + \
-  (((uint64_t)c4)<<32) + \
-  (((uint64_t)c5)<<40) + \
-  (((uint64_t)c6)<<48) + \
-  (((uint64_t)c7)<<56)\
-  )
-
-#define GUPPI_RAW_KEYSTR_UINT64_ID_BE(key) \
-  GUPPI_RAW_KEY_UINT64_ID_BE(key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7])
-
-#define GUPPI_RAW_KEYSTR_UINT64_ID_LE(key) \
-  GUPPI_RAW_KEY_UINT64_ID_LE(key[0], key[1], key[2], key[3], key[4], key[5], key[6], key[7])
-
-typedef struct {
-  // Header populated fields
-  uint32_t n_obschan;
-  uint32_t n_ant;
-  uint32_t n_beam;
-  uint32_t n_pol;
-  uint32_t n_bit;
-  uint64_t block_size;
-
-  // Header inferred fields
-  size_t n_time;
-  uint32_t n_aspect;
-  uint32_t n_aspectchan;
-
-  size_t bytestride_polarization;
-  size_t bytestride_time;
-  size_t bytestride_channel;
-  size_t bytestride_aspect;
-} guppiraw_datashape_t;
-
-typedef void (*guppiraw_header_entry_parser)(const char* entry, void* user_data);
-
-typedef struct {
-  // Header populated fields
-  int directio;
-
-  guppiraw_datashape_t datashape;
-
-  // User data
-  guppiraw_header_entry_parser user_callback;
-  void* user_data;
-} guppiraw_metadata_t;
-
-typedef struct {
-  guppiraw_metadata_t metadata;
-
-  // File position fields
-  off_t file_header_pos;
-  off_t file_data_pos;
-} guppiraw_block_info_t;
-
-typedef struct {
-  int fd;
-  guppiraw_metadata_t metadata;
-  off_t bytesize_file;
-
-  int n_block;
-  int block_index;
-
-  // Block-position fields
-  off_t *file_header_pos;
-  off_t *file_data_pos;
-} guppiraw_file_info_t;
-
-#define guppiraw_file_ntime_remaining(gr_file)\
-  ((gr_file->n_block - gr_file->block_index) * gr_file->metadata.datashape.n_time)
-
-#define guppiraw_file_data_pos(gr_file, block_index) gr_file->file_data_pos[block_index]
-#define guppiraw_file_data_pos_offset(gr_file, block_offset) guppiraw_file_data_pos(gr_file, gr_file->block_index + block_offset)
-#define guppiraw_file_data_pos_current(gr_file) guppiraw_file_data_pos_offset(gr_file, 0)
+#include "guppirawc99/structs.h"
+#include "guppirawc99/header_key.h"
+#include "guppirawc99/file.h"
+#include "guppirawc99/iterate.h"
+#include "guppirawc99/header.h"
+#include "guppirawc99/directio.h"
 
 // Negative `header_length` indicates no hard limit on `header_string` length
 void guppiraw_parse_blockheader_string(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length);
@@ -128,11 +37,6 @@ void guppiraw_parse_blockheader_string(guppiraw_metadata_t* metadata, char* head
  */
 int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
 int guppiraw_skim_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
-int guppiraw_skim_file(guppiraw_file_info_t* gr_fileinfo);
-
-static inline off_t guppiraw_directio_align(off_t value) {
-  return (value + 511) & ~((off_t)511);
-}
 
 static inline int guppiraw_seek_next_block(int fd, const guppiraw_block_info_t* gr_blockinfo) {
   return lseek(
@@ -149,83 +53,6 @@ static inline int guppiraw_read_blockdata(int fd, const guppiraw_block_info_t* g
   return read(fd, buffer, gr_blockinfo->metadata.datashape.block_size);
 }
 
-typedef struct {
-  char* stempath;
-  int stempath_len;
-  int fileenum_offset;
-  
-  guppiraw_file_info_t* file_info;
-  int n_file;
-  int file_index;
-
-  // over all files
-  int n_block;
-  int block_index;
-
-  size_t time_index;
-  size_t chan_index;
-  size_t aspect_index;
-} guppiraw_iterate_info_t;
-
-int guppiraw_iterate_open_with_user_metadata(
-  guppiraw_iterate_info_t* gr_iterate,
-  const char* filepath,
-  size_t user_datasize,
-  guppiraw_header_entry_parser user_callback
-);
-#define guppiraw_iterate_open(gr_iterate, filepath) guppiraw_iterate_open_with_user_metadata(gr_iterate, filepath, 0, NULL)
-
-long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer);
-void guppiraw_iterate_close(guppiraw_iterate_info_t* gr_iterate);
-
-#define guppiraw_iterate_file_info(gr_iterate, index) (gr_iterate->file_info + (index))
-#define guppiraw_iterate_file_info_offset(gr_iterate, offset) guppiraw_iterate_file_info(gr_iterate, gr_iterate->file_index + offset)
-#define guppiraw_iterate_file_info_current(gr_iterate) guppiraw_iterate_file_info_offset(gr_iterate, 0)
-
-#define guppiraw_iterate_metadata(/* const guppiraw_iterate_info_t* */ gr_iterate) (&((gr_iterate)->file_info[0].metadata))
-#define guppiraw_iterate_datashape(/* const guppiraw_iterate_info_t* */ gr_iterate) (&((gr_iterate)->file_info[0].metadata.datashape))
-
-int guppiraw_iterate_file_index_of_block(const guppiraw_iterate_info_t* gr_iterate, int* block_index);
-int guppiraw_iterate_file_index_of_block_offset(const guppiraw_iterate_info_t* gr_iterate, int* block_index);
-
-guppiraw_file_info_t* guppiraw_iterate_file_info_of_block(const guppiraw_iterate_info_t* gr_iterate, int* block_index);
-guppiraw_file_info_t* guppiraw_iterate_file_info_of_block_offset(const guppiraw_iterate_info_t* gr_iterate, int* block_index);
-
-static inline long guppiraw_iterate_read_block(guppiraw_iterate_info_t* gr_iterate, void* buffer) {
-  return guppiraw_iterate_read(
-    gr_iterate,
-    guppiraw_iterate_datashape(gr_iterate)->n_time,
-    guppiraw_iterate_datashape(gr_iterate)->n_aspectchan,
-    guppiraw_iterate_datashape(gr_iterate)->n_aspect,
-    buffer
-  );
-}
-
-static inline size_t guppiraw_iterate_bytesize(const guppiraw_iterate_info_t* gr_iterate, size_t ntime, size_t nchan, size_t naspect) {
-  return naspect * nchan * ntime * guppiraw_iterate_file_info_current(gr_iterate)->metadata.datashape.bytestride_time;
-}
-
-static inline size_t guppiraw_iterate_ntime_remaining(const guppiraw_iterate_info_t* gr_iterate) {
-  return (gr_iterate->n_block - gr_iterate->block_index)*guppiraw_iterate_datashape(gr_iterate)->n_time - gr_iterate->time_index;
-}
-
-typedef struct guppiraw_header_llnode {
-  char keyvalue[81];
-  struct guppiraw_header_llnode* next;
-} guppiraw_header_llnode_t;
-
-typedef struct {
-  guppiraw_header_llnode_t* head;
-  uint32_t n_entries;
-} guppiraw_header_t;
-
-int guppiraw_header_put_string(guppiraw_header_t* header, const char* key, const char* value); 
-int guppiraw_header_put_double(guppiraw_header_t* header, const char* key, const double value); 
-int guppiraw_header_put_integer(guppiraw_header_t* header, const char* key, const int64_t value); 
-
-void guppiraw_header_free(guppiraw_header_t* header);
-
-char* guppiraw_header_malloc_string(const guppiraw_header_t* header, const char directio);
 ssize_t guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data, const uint32_t block_size, const char directio);
 
 #endif// GUPPI_RAW_C99_H_

@@ -1,3 +1,5 @@
 src_lst += files([
-  'guppiraw.c'
+  'guppiraw.c',
+  'iterate.c',
+  'header.c',
 ])
