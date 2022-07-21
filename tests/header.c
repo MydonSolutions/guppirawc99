@@ -34,7 +34,7 @@ int main(int argc, char const *argv[])
 	guppiraw_metadata_t metadata = {0};
 	metadata.user_data = malloc(sizeof(guppiraw_block_meta_t));
 	metadata.user_callback = guppiraw_parse_block_meta;
-	guppiraw_header_parse_string(&metadata, header_string, -1);
+	guppiraw_header_t* header_clone = guppiraw_header_parse(&metadata, header_string, -1);
 	const guppiraw_block_meta_t* user_metadata = (guppiraw_block_meta_t*)metadata.user_data;
 
 	if(strncmp("Faux Observation", user_metadata->obsid, 16) != 0) {
@@ -50,8 +50,26 @@ int main(int argc, char const *argv[])
 		rv = 1;
 	}
 
-	free(header_string);
+	if(rv == 0) {
+		guppiraw_header_llnode_t* head = header.head;
+		guppiraw_header_llnode_t* head_clone = header_clone->head;
+		for(int i = 0; i < header.n_entries; i++) {
+			rv = strncmp(head->keyvalue, head_clone->keyvalue, 80);
+			if(rv != 0) {
+				fprintf(stderr, "#%d: `%s` != `%s`.\n", i, head->keyvalue, head_clone->keyvalue);
+				break;
+			}
+			else {
+				fprintf(stderr, "#%d: `%s` == `%s`.\n", i, head->keyvalue, head_clone->keyvalue);
+			}
+			head = head->next;
+			head_clone = head_clone->next;
+		}
+	}
+
 	guppiraw_header_free(&header);
+	guppiraw_header_free(header_clone);
+	free(header_string);
 
   return rv;
 }

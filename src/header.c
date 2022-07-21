@@ -45,6 +45,32 @@ char guppiraw_header_entry_is_END(const uint64_t* entry_uint64) {
     entry_uint64[9] == _UINT64_BLANK;
 }
 
+guppiraw_header_t* guppiraw_header_parse(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length) {
+	guppiraw_header_t* header = malloc(sizeof(guppiraw_header_t));
+	header->head = malloc(sizeof(guppiraw_header_llnode_t));
+	guppiraw_header_llnode_t* head = header->head;
+	
+  while(
+    !guppiraw_header_entry_is_END((uint64_t*)header_string) && 
+    (header_length >= 80 || header_length < 0)
+  ) {
+    guppiraw_header_parse_entry(header_string, metadata);
+
+		if(header->n_entries > 0) {
+			head->next = malloc(sizeof(guppiraw_header_llnode_t));
+			head = head->next;
+		}
+		memcpy(head->keyvalue, header_string, 80);
+		head->keyvalue[80] = '\0';
+		header->n_entries++;
+
+    header_string += 80;
+    header_length -= 80;
+  }
+	head->next = NULL;
+	return header;
+}
+
 void guppiraw_header_parse_string(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length) {
   while(
     !guppiraw_header_entry_is_END((uint64_t*)header_string) && 
@@ -64,6 +90,7 @@ int _guppiraw_header_put_entry(guppiraw_header_llnode_t* head, const char* keyva
   while(1) {
     if(strncmp(head->keyvalue, keyvalue, 8) == 0) {
       memcpy(head->keyvalue, keyvalue, 80);
+			head->keyvalue[80] = '\0';
       return 0;
     }
 
@@ -74,6 +101,7 @@ int _guppiraw_header_put_entry(guppiraw_header_llnode_t* head, const char* keyva
   }
   head->next = malloc(sizeof(guppiraw_header_llnode_t));
   memcpy(head->next->keyvalue, _GUPPI_RAW_FTISHEADER_VALUEBUF_STR, 80);
+	head->next->keyvalue[80] = '\0';
   head->next->next = NULL;
   return 1;
 }
