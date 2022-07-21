@@ -24,9 +24,6 @@
 #include "guppirawc99/header.h"
 #include "guppirawc99/directio.h"
 
-// Negative `header_length` indicates no hard limit on `header_string` length
-void guppiraw_parse_blockheader_string(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length);
-
 /*
  * 
  *

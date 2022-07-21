@@ -1,61 +1,5 @@
 #include "guppiraw.h"
 
-static const uint64_t KEY_UINT64_BLOCSIZE  = GUPPI_RAW_KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E');
-static const uint64_t KEY_UINT64_NANTS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' ');
-static const uint64_t KEY_UINT64_NBEAMS    = GUPPI_RAW_KEY_UINT64_ID_LE('N','B','E','A','M','S',' ',' ');
-static const uint64_t KEY_UINT64_OBSNCHAN  = GUPPI_RAW_KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N');
-static const uint64_t KEY_UINT64_NPOL      = GUPPI_RAW_KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' ');
-static const uint64_t KEY_UINT64_NBITS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' ');
-static const uint64_t KEY_UINT64_DIRECTIO  = GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O');
-
-static const uint64_t KEY_UINT64_END  = GUPPI_RAW_KEY_UINT64_ID_LE('E','N','D',' ',' ',' ',' ',' ');
-static const uint64_t _UINT64_BLANK   = GUPPI_RAW_KEY_UINT64_ID_LE(' ',' ',' ',' ',' ',' ',' ',' ');
-
-static inline void _parse_entry(const char* entry, guppiraw_metadata_t* metadata) {
-  if(((uint64_t*)entry)[0] == KEY_UINT64_BLOCSIZE)
-    hgetu8(entry, "BLOCSIZE", &metadata->datashape.block_size);
-  else if(((uint64_t*)entry)[0] == KEY_UINT64_NANTS)
-    hgetu4(entry, "NANTS", &metadata->datashape.n_ant);
-  else if(((uint64_t*)entry)[0] == KEY_UINT64_NBEAMS)
-    hgetu4(entry, "NBEAMS", &metadata->datashape.n_beam);
-  else if(((uint64_t*)entry)[0] == KEY_UINT64_OBSNCHAN)
-    hgetu4(entry, "OBSNCHAN", &metadata->datashape.n_obschan);
-  else if(((uint64_t*)entry)[0] == KEY_UINT64_NPOL)
-    hgetu4(entry, "NPOL", &metadata->datashape.n_pol);
-  else if(((uint64_t*)entry)[0] == KEY_UINT64_NBITS)
-    hgetu4(entry, "NBITS", &metadata->datashape.n_bit);
-  else if(((uint64_t*)entry)[0] == KEY_UINT64_DIRECTIO)
-    hgeti4(entry, "DIRECTIO", &metadata->directio);
-
-  if(metadata->user_callback != 0) {
-    metadata->user_callback(entry, metadata->user_data);
-  }
-}
-
-static inline char _guppiraw_header_entry_is_END(const uint64_t* entry_uint64) {
-  return entry_uint64[0] == KEY_UINT64_END &&
-    entry_uint64[1] == _UINT64_BLANK &&
-    entry_uint64[2] == _UINT64_BLANK &&
-    entry_uint64[3] == _UINT64_BLANK &&
-    entry_uint64[4] == _UINT64_BLANK &&
-    entry_uint64[5] == _UINT64_BLANK &&
-    entry_uint64[6] == _UINT64_BLANK &&
-    entry_uint64[7] == _UINT64_BLANK &&
-    entry_uint64[8] == _UINT64_BLANK &&
-    entry_uint64[9] == _UINT64_BLANK;
-}
-
-void guppiraw_parse_blockheader_string(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length) {
-  int32_t entry_count = 0;
-  while(
-    !_guppiraw_header_entry_is_END((uint64_t*)header_string) && 
-    ((++entry_count)*80 < header_length || header_length < 0)
-  ) {
-    _parse_entry(header_string, metadata);
-    header_string += 80;
-  }
-}
-
 /*
  *
  * Returns:
@@ -75,7 +19,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
   // with files opened with O_DIRECT.
   char entries[GUPPI_RAW_HEADER_DIGEST_BYTES] __attribute__ ((aligned (512)));
   char *entry = entries;
-  while(!_guppiraw_header_entry_is_END((uint64_t*)entry) && header_entry_count < GUPPI_RAW_HEADER_MAX_ENTRIES) {
+  while(!guppiraw_header_entry_is_END((uint64_t*)entry) && header_entry_count < GUPPI_RAW_HEADER_MAX_ENTRIES) {
 
     if(header_entry_count%GUPPI_RAW_HEADER_DIGEST_ENTRIES == 0){
       // read GUPPI_RAW_HEADER_DIGEST_ENTRIES at a time
@@ -86,7 +30,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
     }
 
     if(gr_blockinfo != NULL && parse) {
-      _parse_entry(entry, &gr_blockinfo->metadata);
+      guppiraw_header_parse_entry(entry, &gr_blockinfo->metadata);
     }
     entry += 80;
     header_entry_count++;

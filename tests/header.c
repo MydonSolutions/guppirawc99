@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "guppiraw.h"
+#include "guppirawc99/header.h"
 
 typedef struct {
 	char obsid[72];
@@ -34,7 +34,7 @@ int main(int argc, char const *argv[])
 	guppiraw_metadata_t metadata = {0};
 	metadata.user_data = malloc(sizeof(guppiraw_block_meta_t));
 	metadata.user_callback = guppiraw_parse_block_meta;
-	guppiraw_parse_blockheader_string(&metadata, header_string, -1);
+	guppiraw_header_parse_string(&metadata, header_string, -1);
 	const guppiraw_block_meta_t* user_metadata = (guppiraw_block_meta_t*)metadata.user_data;
 
 	if(strncmp("Faux Observation", user_metadata->obsid, 16) != 0) {

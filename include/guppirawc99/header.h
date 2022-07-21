@@ -9,8 +9,15 @@
 #include <string.h>
 
 #include "fitsheader.h"
+#include "guppirawc99/structs.h"
 #include "guppirawc99/header_key.h"
 #include "guppirawc99/directio.h"
+
+
+void guppiraw_header_parse_entry(const char* entry, guppiraw_metadata_t* metadata);
+char guppiraw_header_entry_is_END(const uint64_t* entry_uint64);
+// Negative `header_length` indicates no hard limit on `header_string` length
+void guppiraw_header_parse_string(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length);
 
 typedef struct guppiraw_header_llnode {
   char keyvalue[81];
