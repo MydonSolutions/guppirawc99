@@ -1,7 +1,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <assert.h>
-#include "guppiraw.h"
+#include "guppirawc99/header.h"
+#include "guppirawc99/iterate.h"
 
 #define ELAPSED_NS(start,stop) \
   (((int64_t)stop.tv_sec-start.tv_sec)*1000*1000*1000+(stop.tv_nsec-start.tv_nsec))
