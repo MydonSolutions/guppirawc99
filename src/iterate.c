@@ -57,10 +57,19 @@ int _guppiraw_iterate_open(
 
   // Collate `file_info` linked-list under array.
   gr_iterate->file_info = malloc(gr_iterate->n_file*sizeof(guppiraw_file_info_t));
+  gr_iterate->block_location = malloc(gr_iterate->n_block*sizeof(guppiraw_block_location_t));
 
+	guppiraw_block_location_t* cur_block_loc = gr_iterate->block_location;
+	int b;
   for(int i = 0; i < gr_iterate->n_file; i++) {
     memcpy(gr_iterate->file_info + i, &file_ll_head->file_info, sizeof(guppiraw_file_info_t));
     (gr_iterate->file_info + i)->metadata.user_data = file_ll_head->file_info.metadata.user_data;
+
+		for(b = 0; b < file_ll_head->file_info.n_block; b++) {
+			cur_block_loc->file_index = i;
+			cur_block_loc->fileblock_index = b;
+			cur_block_loc++;
+		}
 
     file_cur = file_ll_head;
     file_ll_head = file_ll_head->next;
@@ -110,52 +119,44 @@ void guppiraw_iterate_close(guppiraw_iterate_info_t* gr_iterate) {
     close(gr_iterate->file_info[i].fd);
   }
   free(gr_iterate->file_info);
+  free(gr_iterate->block_location);
   free(gr_iterate->stempath);
 }
 
-void _guppiraw_iterate_file_index_of_block(
-  const guppiraw_iterate_info_t* gr_iterate, int* block_index, int* file_index
-) {
-  while(
-    *file_index < gr_iterate->n_file &&
-    *block_index >= gr_iterate->file_info[*file_index].n_block 
-  ) {
-    *block_index -= gr_iterate->file_info[*file_index].n_block;
-    *file_index += 1;
-  }
-}
-
 int guppiraw_iterate_file_index_of_block(const guppiraw_iterate_info_t* gr_iterate, int* block_index) {
-  int file_index = 0;
-  _guppiraw_iterate_file_index_of_block(gr_iterate, block_index, &file_index);
-  return file_index;
+	int file_index;
+	if(*block_index >= gr_iterate->n_block) {
+		file_index = gr_iterate->block_location[gr_iterate->n_block-1].file_index;
+		*block_index = (*block_index - gr_iterate->n_block) + guppiraw_iterate_file_info(gr_iterate, file_index)->n_block;
+	}
+	else {
+		file_index = gr_iterate->block_location[*block_index].file_index;
+		*block_index = gr_iterate->block_location[*block_index].fileblock_index;
+	}
+	return file_index;
 }
 
 int guppiraw_iterate_file_index_of_block_offset(const guppiraw_iterate_info_t* gr_iterate, int* block_index) {
-  *block_index += guppiraw_iterate_file_info_current(gr_iterate)->block_index;
-  int file_index = gr_iterate->file_index;
-  _guppiraw_iterate_file_index_of_block(gr_iterate, block_index, &file_index);
-  return file_index;
-}
-
-guppiraw_file_info_t* _guppiraw_iterate_file_info_of_block(
-  const guppiraw_iterate_info_t* gr_iterate, int* block_index, int file_index
-) {
-  _guppiraw_iterate_file_index_of_block(gr_iterate, block_index, &file_index);
-  return file_index < gr_iterate->n_file ? gr_iterate->file_info + file_index : NULL;
+  *block_index += gr_iterate->block_index;
+  int file_index = guppiraw_iterate_file_index_of_block(gr_iterate, block_index);
+	*block_index -= guppiraw_iterate_file_info(gr_iterate, file_index)->block_index;
+	return file_index;
 }
 
 guppiraw_file_info_t* guppiraw_iterate_file_info_of_block(
   const guppiraw_iterate_info_t* gr_iterate, int* block_index
 ) {
-  return _guppiraw_iterate_file_info_of_block(gr_iterate, block_index, 0);
+  return *block_index < gr_iterate->n_block ?
+		gr_iterate->file_info + guppiraw_iterate_file_index_of_block(gr_iterate, block_index) :
+		NULL
+	;
 }
 
 guppiraw_file_info_t* guppiraw_iterate_file_info_of_block_offset(
   const guppiraw_iterate_info_t* gr_iterate, int* block_index
 ) {
-  *block_index += guppiraw_iterate_file_info_current(gr_iterate)->block_index;
-  guppiraw_file_info_t* rv = _guppiraw_iterate_file_info_of_block(gr_iterate, block_index, gr_iterate->file_index);
+  *block_index += gr_iterate->block_index;
+  guppiraw_file_info_t* rv = guppiraw_iterate_file_info_of_block(gr_iterate, block_index);
   *block_index -= rv->block_index;
   return rv;
 }
@@ -438,13 +439,13 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
     if(gr_iterate->aspect_index + naspect >= datashape->n_aspect) {
       if(gr_iterate->time_index + ntime >= datashape->n_time) {
         const int block_increment = (gr_iterate->time_index + ntime) / datashape->n_time;
-        int block_index = block_increment;
-        const int file_index = guppiraw_iterate_file_index_of_block_offset(gr_iterate, &block_index);
+        int fileblock_offset = block_increment;
+        const int file_index = guppiraw_iterate_file_index_of_block_offset(gr_iterate, &fileblock_offset);
         for(; gr_iterate->file_index != file_index; gr_iterate->file_index++) {
           gr_iterate->file_info[gr_iterate->file_index].block_index = gr_iterate->file_info[gr_iterate->file_index].n_block;
         }
         gr_iterate->block_index += block_increment;
-        gr_iterate->file_info[gr_iterate->file_index].block_index = block_index;
+        gr_iterate->file_info[gr_iterate->file_index].block_index += fileblock_offset;
       }
       gr_iterate->time_index = (gr_iterate->time_index + ntime) % datashape->n_time;
     }

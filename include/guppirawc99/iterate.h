@@ -16,6 +16,11 @@
 #include "guppirawc99/file.h"
 
 typedef struct {
+	int file_index;
+	int fileblock_index;
+} guppiraw_block_location_t;
+
+typedef struct {
   char* stempath;
   int stempath_len;
   int fileenum_offset;
@@ -25,6 +30,7 @@ typedef struct {
   int file_index;
 
   // over all files
+	guppiraw_block_location_t* block_location;
   int n_block;
   int block_index;
 
