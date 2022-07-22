@@ -343,21 +343,40 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
   const guppiraw_file_info_t* file_info = guppiraw_iterate_file_info_current(gr_iterate);  
   const guppiraw_metadata_t* metadata = &file_info->metadata;  
   const guppiraw_datashape_t* datashape = &metadata->datashape;
+	if((datashape->n_aspectchan - gr_iterate->chan_index) % nchan != 0) {
+    fprintf(
+			stderr,
+			"Error: channel dimension step is not a factor: n_aspectchan - chan_index (%u - %ld) %% (%ld) nchan != 0.\n",
+			datashape->n_aspectchan, gr_iterate->chan_index, nchan
+		);
+    return -1;
+	}
+	if((datashape->n_aspect - gr_iterate->aspect_index) % naspect != 0) {
+    fprintf(
+			stderr,
+			"Error: channel dimension step is not a factor: n_aspect - aspect_index (%u - %ld) %% (%ld) naspect != 0.\n",
+			datashape->n_aspect, gr_iterate->aspect_index, naspect
+		);
+    return -1;
+	}
+
   if(gr_iterate->chan_index + nchan > datashape->n_aspectchan) {
     // cannot gather in channel dimension
-    fprintf(stderr, "Error: cannot gather in channel dimension.\n");
+    fprintf(
+			stderr,
+			"Error: cannot gather in channel dimension: chan_index + nchan (%ld + %ld) > (%u) n_aspectchan.\n",
+			gr_iterate->chan_index, nchan, datashape->n_aspectchan
+		);
     return -1;
   }
   if(gr_iterate->aspect_index + naspect > datashape->n_aspect) {
     // cannot gather in aspect dimension
-    fprintf(stderr, "Error: cannot gather in aspect dimension.\n");
+    fprintf(
+			stderr,
+			"Error: cannot gather in aspect dimension: aspect_index + naspect (%ld + %ld) > (%u) n_aspect.\n",
+			gr_iterate->aspect_index, naspect, datashape->n_aspect
+		);
     return -1;
-  }
-  if(file_info->block_index == file_info->n_block) {
-    _guppiraw_iterate_open(gr_iterate, 0, NULL);
-    if(file_info->fd <= 0) {
-      return 0;
-    }
   }
 
   long bytes_read = 0;

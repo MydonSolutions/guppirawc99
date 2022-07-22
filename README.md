@@ -32,6 +32,23 @@ DIRECTIO | Header and Data are DIRECTIO (512) aligned with padding, or not. `int
 - user-callback for header entry parsing
 - file boundary transparency
 
+## Arbitrary Iteration
+
+This library enables arbitrary iteration over the data in a GUPPI RAW stem via `ntime, nchan, naspect` parameters to the `guppiraw_iterate_read` function. 
+`long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer);`
+
+The latter 2 parameters are obviously limited to factors of the number of aspect-channels and aspects in a block, respectively. The `ntime` parameter can be any number. Iteration will exhaust the aspect-channels (`n_aspectchan`), then the aspects (`n_aspect`) and only then the time (`n_time`) dimension of the stem, in steps as defined by the `ntime, nchan, naspect` parameters:
+
+```
+for time = 0; time + ntime <= n_time; time += ntime
+	for aspect = 0; aspect < n_aspect; aspect += naspect
+		for channel = 0; channel < n_aspectchan; channel += nchan
+			...
+```
+
+The `*buffer` parameter is expected to be appropriately large, with the provided `guppiraw_iterate_bytesize` defining the calculation.
+
+
 ## Compilation
 
 1. Use meson and ninja:
