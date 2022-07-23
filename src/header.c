@@ -45,16 +45,19 @@ char guppiraw_header_entry_is_END(const uint64_t* entry_uint64) {
     entry_uint64[9] == _UINT64_BLANK;
 }
 
-guppiraw_header_t* guppiraw_header_parse(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length) {
-	guppiraw_header_t* header = malloc(sizeof(guppiraw_header_t));
-	header->head = malloc(sizeof(guppiraw_header_llnode_t));
+void guppiraw_header_parse(guppiraw_header_t* header, char* header_string, int64_t header_string_length) {
+  if(header->head != NULL) {
+    free(header->head);
+  }
+  header->n_entries = 0;
+  header->head = malloc(sizeof(guppiraw_header_llnode_t));
 	guppiraw_header_llnode_t* head = header->head;
 	
   while(
     !guppiraw_header_entry_is_END((uint64_t*)header_string) && 
-    (header_length >= 80 || header_length < 0)
+    (header_string_length >= 80 || header_string_length < 0)
   ) {
-    guppiraw_header_parse_entry(header_string, metadata);
+    guppiraw_header_parse_entry(header_string, &header->metadata);
 
 		if(header->n_entries > 0) {
 			head->next = malloc(sizeof(guppiraw_header_llnode_t));
@@ -65,20 +68,20 @@ guppiraw_header_t* guppiraw_header_parse(guppiraw_metadata_t* metadata, char* he
 		header->n_entries++;
 
     header_string += 80;
-    header_length -= 80;
+    header_string_length -= 80;
   }
 	head->next = NULL;
 	return header;
 }
 
-void guppiraw_header_parse_string(guppiraw_metadata_t* metadata, char* header_string, int64_t header_length) {
+void guppiraw_header_string_parse_metadata(guppiraw_metadata_t* metadata, char* header_string, int64_t header_string_length) {
   while(
     !guppiraw_header_entry_is_END((uint64_t*)header_string) && 
-    (header_length >= 80 || header_length < 0)
+    (header_string_length >= 80 || header_string_length < 0)
   ) {
     guppiraw_header_parse_entry(header_string, metadata);
     header_string += 80;
-    header_length -= 80;
+    header_string_length -= 80;
   }
 }
 
@@ -149,6 +152,27 @@ int guppiraw_header_put_integer(guppiraw_header_t* header, const char* key, cons
   header->n_entries += _guppiraw_header_put_integer(header->head, key, value);
   return 0;
 }
+int guppiraw_header_put_metadata(guppiraw_header_t* header) {
+	guppiraw_header_put_integer(header, "NBITS", header->metadata.datashape.n_bit);
+	guppiraw_header_put_integer(header, "NPOL", header->metadata.datashape.n_pol);
+	guppiraw_header_put_integer(header, "NANTS", header->metadata.datashape.n_ant);
+  header->metadata.datashape.n_aspect = header->metadata.datashape.n_ant;
+  if(header->metadata.datashape.n_beam > 0) {
+	  guppiraw_header_put_integer(header, "NBEAMS", header->metadata.datashape.n_beam);
+    header->metadata.datashape.n_aspect = header->metadata.datashape.n_beam;
+  }
+  header->metadata.datashape.block_size = (
+    header->metadata.datashape.n_aspect*header->metadata.datashape.n_aspectchan
+    *header->metadata.datashape.n_time*header->metadata.datashape.n_pol
+    *2*header->metadata.datashape.n_bit)/8
+  ;
+  
+	guppiraw_header_put_integer(header, "OBSNCHAN", header->metadata.datashape.n_aspect*header->metadata.datashape.n_aspectchan);
+	guppiraw_header_put_integer(header, "BLOCSIZE", header->metadata.datashape.block_size);
+	guppiraw_header_put_integer(header, "DIRECTIO", header->metadata.directio);
+  return 0;
+}
+
 
 void _guppiraw_header_free(guppiraw_header_llnode_t* head) {
   if(head->next != NULL) {
@@ -169,7 +193,8 @@ const char _guppiraw_directio_padding_buffer[513] =
 "********************************************************************************************************************************"
 "********************************************************************************************************************************";
 
-char* guppiraw_header_malloc_string(const guppiraw_header_t* header, const char directio) {
+char* guppiraw_header_malloc_string(const guppiraw_header_t* header) {
+  const char directio = header->metadata.directio;
   const int n_entries = header->n_entries;
   const size_t header_entries_len = (n_entries + 1) * 80;
   guppiraw_header_llnode_t* header_entry = header->head;

@@ -38,14 +38,16 @@ int main(int argc, char const *argv[])
 	const int blocks_per_file = 11;
 
 	guppiraw_header_t header = {0};
-	guppiraw_header_put_integer(&header, "NBITS", n_bits);
-	guppiraw_header_put_integer(&header, "NPOL", n_pols);
-	guppiraw_header_put_integer(&header, "OBSNCHAN", n_ant*n_chan_perant);
-	guppiraw_header_put_integer(&header, "NANTS", n_ant);
-	guppiraw_header_put_integer(&header, "BLOCSIZE", block_bytesize);
+	header.metadata.datashape.n_bit = n_bits;
+	header.metadata.datashape.n_pol = n_pols;
+	header.metadata.datashape.n_ant = n_ant;
+	header.metadata.datashape.n_time = n_time;
+	header.metadata.datashape.n_aspectchan = n_chan_perant;
+	header.metadata.datashape.block_size = block_bytesize;
+	header.metadata.directio = 1;
+	guppiraw_header_put_metadata(&header);
 	guppiraw_header_put_string(&header, "OBSID", "Synth Observation");
 	guppiraw_header_put_double(&header, "CHAN_BW", 3.14159265);
-	guppiraw_header_put_integer(&header, "DIRECTIO", 1);
 
 	void* data __attribute__ ((aligned (512))) = memalign(512, block_bytesize);
 
@@ -87,7 +89,7 @@ int main(int argc, char const *argv[])
 		guppiraw_header_put_integer(&header, "BLOCIDX", block_idx);
 		
 		clock_gettime(CLOCK_MONOTONIC, &start);
-			guppiraw_write_block(fd, &header, data, block_bytesize, 1);
+			guppiraw_write_block(fd, &header, data);
 		clock_gettime(CLOCK_MONOTONIC, &stop);
 		writing_ns += ELAPSED_NS(start, stop);
 	}

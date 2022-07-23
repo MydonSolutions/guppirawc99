@@ -50,6 +50,6 @@ static inline int guppiraw_read_blockdata(int fd, const guppiraw_block_info_t* g
   return read(fd, buffer, gr_blockinfo->metadata.datashape.block_size);
 }
 
-ssize_t guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data, const uint32_t block_size, const char directio);
+ssize_t guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data);
 
 #endif// GUPPI_RAW_C99_H_

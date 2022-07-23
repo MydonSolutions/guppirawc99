@@ -163,8 +163,10 @@ int guppiraw_skim_file(guppiraw_file_info_t* gr_fileinfo) {
   return rv;
 }
 
-ssize_t guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data, const uint32_t block_size, const char directio) {
-  char* header_string = guppiraw_header_malloc_string(header, directio);
+ssize_t guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data) {
+  const char directio = header->metadata.directio;
+  const size_t block_size = header->metadata.datashape.block_size;
+  char* header_string = guppiraw_header_malloc_string(header);
   const size_t header_entries_len = (header->n_entries+1) * 80;
   const size_t header_string_len = directio ? guppiraw_directio_align(header_entries_len) : header_entries_len;
 

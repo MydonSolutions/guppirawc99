@@ -26,23 +26,25 @@ int main(int argc, char const *argv[])
 	guppiraw_header_put_double(&header, "CHAN_BW", 0.1024);
 	guppiraw_header_put_double(&header, "CHAN_BW", 0.5);
   
-	char* header_string = guppiraw_header_malloc_string(&header, 0);
+	char* header_string = guppiraw_header_malloc_string(&header);
 	printf("%s\n", header_string);
 
 	int rv = 0;
 
-	guppiraw_metadata_t metadata = {0};
-	metadata.user_data = malloc(sizeof(guppiraw_block_meta_t));
-	metadata.user_callback = guppiraw_parse_block_meta;
-	guppiraw_header_t* header_clone = guppiraw_header_parse(&metadata, header_string, -1);
-	const guppiraw_block_meta_t* user_metadata = (guppiraw_block_meta_t*)metadata.user_data;
+	guppiraw_header_t header_clone = {0};
+	guppiraw_metadata_t* metadata = &header_clone.metadata;
+	metadata->user_data = malloc(sizeof(guppiraw_block_meta_t));
+	metadata->user_callback = guppiraw_parse_block_meta;
+	guppiraw_header_parse(&header_clone, header_string, -1);
+
+	const guppiraw_block_meta_t* user_metadata = (guppiraw_block_meta_t*)metadata->user_data;
 
 	if(strncmp("Faux Observation", user_metadata->obsid, 16) != 0) {
 		fprintf(stderr, "OBSID != 'Faux Observation': '%s'\n", user_metadata->obsid);
 		rv = 1;
 	}
-	else if(metadata.datashape.n_obschan != 1024) {
-		fprintf(stderr, "OBSNCHAN != 1024: %d\n", metadata.datashape.n_obschan);
+	else if(metadata->datashape.n_obschan != 1024) {
+		fprintf(stderr, "OBSNCHAN != 1024: %d\n", metadata->datashape.n_obschan);
 		rv = 1;
 	}
 	else if(user_metadata->chan_bw != 0.5) {
@@ -52,7 +54,7 @@ int main(int argc, char const *argv[])
 
 	if(rv == 0) {
 		guppiraw_header_llnode_t* head = header.head;
-		guppiraw_header_llnode_t* head_clone = header_clone->head;
+		guppiraw_header_llnode_t* head_clone = header_clone.head;
 		for(int i = 0; i < header.n_entries; i++) {
 			rv = strncmp(head->keyvalue, head_clone->keyvalue, 80);
 			if(rv != 0) {
@@ -68,7 +70,7 @@ int main(int argc, char const *argv[])
 	}
 
 	guppiraw_header_free(&header);
-	guppiraw_header_free(header_clone);
+	guppiraw_header_free(&header_clone);
 	free(header_string);
 
   return rv;
