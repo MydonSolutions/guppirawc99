@@ -37,6 +37,11 @@ int main(int argc, char const *argv[])
 	const int blocks = 36;
 	const int blocks_per_file = 11;
 
+	const int n_aspect_batch = 3;
+	const int n_batched_aspect = n_ant/n_aspect_batch;
+	const int n_chan_batch = 5;
+	const int64_t batch_aspect_block_bytesize = block_bytesize / (n_aspect_batch * n_chan_batch * n_batched_aspect);
+
 	guppiraw_header_t header = {0};
 	header.metadata.datashape.n_bit = n_bits;
 	header.metadata.datashape.n_pol = n_pols;
@@ -82,14 +87,19 @@ int main(int argc, char const *argv[])
 		if(!do_not_validate || block_idx == 0) {
 			srand(seed + block_idx);
 			guppiraw_header_put_integer(&header, "BLOCSEED", seed + block_idx);
-			for(int i = 0; i < block_bytesize/sizeof(int); i++)
-				((int*)data)[i] = rand();
+			for(int aspect_batch_i = 0; aspect_batch_i < n_aspect_batch; aspect_batch_i++)
+				for(int batch_aspect_i = 0; batch_aspect_i < n_batched_aspect; batch_aspect_i++)
+					for(int chan_batch_i = 0; chan_batch_i < n_chan_batch; chan_batch_i++)
+						for(int i = 0; i < batch_aspect_block_bytesize/sizeof(int); i++)
+							((int*)(
+								data + ((aspect_batch_i * n_chan_batch + chan_batch_i) * n_batched_aspect + batch_aspect_i) * batch_aspect_block_bytesize
+							))[i] = rand();
 		}
 		
 		guppiraw_header_put_integer(&header, "BLOCIDX", block_idx);
 		
 		clock_gettime(CLOCK_MONOTONIC, &start);
-			guppiraw_write_block(fd, &header, data);
+			guppiraw_write_block_batched(fd, &header, data, n_aspect_batch, n_chan_batch);
 		clock_gettime(CLOCK_MONOTONIC, &stop);
 		writing_ns += ELAPSED_NS(start, stop);
 	}
@@ -111,7 +121,7 @@ int main(int argc, char const *argv[])
 	guppiraw_iterate_info_t gr_iterate = {0};
 	int rv = guppiraw_iterate_open(&gr_iterate, argv[argc-1]);
   if(rv) {
-		fprintf(stderr, "Error opening: %s.%04d.raw: %d\n", gr_iterate.stempath, gr_iterate.n_file, rv);
+		fprintf(stderr, "Error opening: %s.%04d.raw: %d, fileblock %d\n", gr_iterate.stempath, gr_iterate.n_file, rv, guppiraw_iterate_file_info(&gr_iterate, gr_iterate.n_file)->n_block);
 		return 1;
 	}
 

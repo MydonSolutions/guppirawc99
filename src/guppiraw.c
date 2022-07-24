@@ -163,21 +163,78 @@ int guppiraw_skim_file(guppiraw_file_info_t* gr_fileinfo) {
   return rv;
 }
 
-ssize_t guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data) {
+typedef struct {
+  struct iovec* iovecs;
+  int iovec_count;
+} writev_parameters_t;
+
+ssize_t guppiraw_write_block_batched(
+  const int fd,
+  const guppiraw_header_t* header,
+  const void* data,
+  const size_t n_aspect_batch,
+  const size_t n_chan_batch
+) {
   const char directio = header->metadata.directio;
   const size_t block_size = header->metadata.datashape.block_size;
   char* header_string = guppiraw_header_malloc_string(header);
   const size_t header_entries_len = (header->n_entries+1) * 80;
   const size_t header_string_len = directio ? guppiraw_directio_align(header_entries_len) : header_entries_len;
 
-  struct iovec* block_iovecs = malloc(2*sizeof(struct iovec));
-  block_iovecs[0].iov_base = header_string;
-  block_iovecs[0].iov_len = header_string_len;
+  const long max_iovecs = sysconf(_SC_IOV_MAX);
+  writev_parameters_t writev_params = {0};
+  writev_params.iovecs = malloc(max_iovecs * sizeof(struct iovec));
+  writev_params.iovec_count = 0;
 
-  block_iovecs[1].iov_base = data;
-  block_iovecs[1].iov_len = directio ? guppiraw_directio_align(block_size) : block_size;
+  writev_params.iovecs[0].iov_base = header_string;
+  writev_params.iovecs[0].iov_len = header_string_len;
+  writev_params.iovec_count++;
 
-  ssize_t bytes_written = writev(fd, block_iovecs, 2);
+  const size_t n_batched_aspect = header->metadata.datashape.n_aspect / n_aspect_batch;
+  const size_t aspect_batch_block_size = block_size / n_aspect_batch;
+  const size_t batch_block_size = aspect_batch_block_size / n_chan_batch;
+  const size_t batch_aspect_stride = batch_block_size / n_batched_aspect;
+
+  size_t aspect_batch_i, batch_aspect_i, chan_batch_i;
+  ssize_t bytes_written = 0;
+  for(aspect_batch_i = 0; aspect_batch_i < n_aspect_batch; aspect_batch_i++) {
+    for(batch_aspect_i = 0; batch_aspect_i < n_batched_aspect; batch_aspect_i++) {
+      for(chan_batch_i = 0; chan_batch_i < n_chan_batch; chan_batch_i++) {
+        writev_params.iovecs[writev_params.iovec_count].iov_base = data + 
+          aspect_batch_i*aspect_batch_block_size
+          + chan_batch_i*batch_block_size
+          + batch_aspect_i*batch_aspect_stride;
+
+        writev_params.iovecs[writev_params.iovec_count].iov_len = batch_aspect_stride;
+        writev_params.iovec_count++;
+        if(writev_params.iovec_count == max_iovecs) {
+          const ssize_t _bytes_written = writev(fd, writev_params.iovecs, writev_params.iovec_count);
+          if(_bytes_written <= 0) {
+            fprintf(stderr, "writev() error: %ld (@ %lu, %lu, %lu)\n", _bytes_written, aspect_batch_i, batch_aspect_i, chan_batch_i);
+            return _bytes_written;
+          }
+          bytes_written += bytes_written;
+          
+          writev_params.iovec_count = 0;
+        }
+      }
+    }
+  }
+
+  if(directio) {
+    const size_t directio_pad_length = guppiraw_directio_align(block_size) - block_size;
+    if(writev_params.iovec_count > 0) {
+      writev_params.iovecs[writev_params.iovec_count].iov_len += directio_pad_length;
+    }
+    else {
+        writev_params.iovecs[writev_params.iovec_count].iov_base = data;
+        writev_params.iovecs[writev_params.iovec_count].iov_len = directio_pad_length;
+        writev_params.iovec_count++;
+    }
+  }
+  bytes_written += writev(fd, writev_params.iovecs, writev_params.iovec_count);
+
   free(header_string);
+  free(writev_params.iovecs);
   return bytes_written;
 }

@@ -50,6 +50,7 @@ static inline int guppiraw_read_blockdata(int fd, const guppiraw_block_info_t* g
   return read(fd, buffer, gr_blockinfo->metadata.datashape.block_size);
 }
 
-ssize_t guppiraw_write_block(const int fd, const guppiraw_header_t* header, const void* data);
+ssize_t guppiraw_write_block_batched(const int fd, const guppiraw_header_t* header, const void* data, const size_t n_aspect_batch, const size_t n_chan_batch);
+#define guppiraw_write_block(fd, header, data) guppiraw_write_block_batched(fd, header, data, 1, 1)
 
 #endif// GUPPI_RAW_C99_H_
