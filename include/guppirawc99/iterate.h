@@ -60,7 +60,7 @@ int guppiraw_iterate_open_with_user_metadata(
 long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer);
 void guppiraw_iterate_close(guppiraw_iterate_info_t* gr_iterate);
 
-#define guppiraw_iterate_file_info(gr_iterate, index) (gr_iterate->file_info + (index))
+#define guppiraw_iterate_file_info(gr_iterate, index) ((gr_iterate)->file_info + (index))
 #define guppiraw_iterate_file_info_offset(gr_iterate, offset) guppiraw_iterate_file_info(gr_iterate, gr_iterate->file_index + offset)
 #define guppiraw_iterate_file_info_current(gr_iterate) guppiraw_iterate_file_info_offset(gr_iterate, 0)
 
