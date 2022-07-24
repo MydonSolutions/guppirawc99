@@ -71,7 +71,6 @@ void guppiraw_header_parse(guppiraw_header_t* header, char* header_string, int64
     header_string_length -= 80;
   }
 	head->next = NULL;
-	return header;
 }
 
 void guppiraw_header_string_parse_metadata(guppiraw_metadata_t* metadata, char* header_string, int64_t header_string_length) {
