@@ -1,14 +1,15 @@
 # GUPPI RAW C99 Library
 
-This library support ingesting and creating GUPPI RAW files. Such files have one or more blocks, which are pairs of FITS formatted headers (80 character entries) followed by binary data.
+This library support ingesting and creating GUPPI RAW files. Such files have one or more blocks, which are pairs of FITS formatted headers (80 character entries) followed by binary data. While each block has blockdata, and each file has one or more blocks, a "stem" has one or more files and refers to the whole dataset: each file within a stem is enumerated with a suffix.
 
 ```
+ file           !________________________________stem_filepath.%04d.raw_______________________...
  block         	!HEADER!___________________________________1___________________________________!
  aspect        	       !_________________1_________________!_________________2_________________!
  channel       	       !_____1_____!_____2_____!_____3_____!_____1_____!_____2_____!_____3_____!
  time          	       !_1_!_2_!_3_!_1_!_2_!_3_!_1_!_2_!_3_!_1_!_2_!_3_!_1_!_2_!_3_!_1_!_2_!_3_!
  polarization  	       !1!2!1!2!1!2!1!2!1!2!1!2!1!2!1!2!1!2!1!2!1!2!1!2!1!2!1!2!1!2!1!2!1!2!1!2!
- complex samples       !SSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS!
+ complex samples
 ```
 
 There is only one critical header-entry (`BLOCSIZE`), the ommission of which results in an error, while further header-entries specify the block's shape, but have default values:
@@ -34,10 +35,11 @@ DIRECTIO | Header and Data are DIRECTIO (512) aligned with padding, or not. `int
 
 ## Arbitrary Iteration
 
-This library enables arbitrary iteration over the data in a GUPPI RAW stem via `ntime, nchan, naspect` parameters to the `guppiraw_iterate_read` function. 
+This library enables arbitrary iteration over the data in a GUPPI RAW stem via `ntime, nchan, naspect` parameters to the `guppiraw_iterate_read` function. These parameters define the dimensions of each access into the data held within a stem. The latter 2 parameters are obviously limited to factors of the number of aspect-channels and aspects in a block, respectively. The `ntime` parameter can be any number.
+
 `long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer);`
 
-The latter 2 parameters are obviously limited to factors of the number of aspect-channels and aspects in a block, respectively. The `ntime` parameter can be any number. Iteration will exhaust the aspect-channels (`n_aspectchan`), then the aspects (`n_aspect`) and only then the time (`n_time`) dimension of the stem, in steps as defined by the `ntime, nchan, naspect` parameters:
+Iteration will exhaust the aspect-channels (`n_aspectchan`), then the aspects (`n_aspect`) and only then the time (`n_time`) dimension of the stem. Each iteration steps through the underlying data as defined by the `ntime, nchan, naspect` parameters:
 
 ```
 for time = 0; time + ntime <= n_time; time += ntime
@@ -47,7 +49,6 @@ for time = 0; time + ntime <= n_time; time += ntime
 ```
 
 The `*buffer` parameter is expected to be appropriately large, with the provided `guppiraw_iterate_bytesize` defining the calculation.
-
 
 ## Compilation
 
