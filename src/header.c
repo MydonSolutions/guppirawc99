@@ -26,8 +26,53 @@ void guppiraw_header_parse_entry(const char* entry, guppiraw_metadata_t* metadat
     hgetu4(entry, "NBITS", &metadata->datashape.n_bit);
   else if(((uint64_t*)entry)[0] == KEY_UINT64_DIRECTIO)
     hgeti4(entry, "DIRECTIO", &metadata->directio);
+  else if(((uint64_t*)entry)[0] == KEY_UINT64_END) {
+    // closing call for the header
+    guppiraw_datashape_t* datashape = &metadata->datashape;
+    if(datashape->n_obschan == 0) {
+      // some factor is zero!
+      fprintf(
+        stderr,
+        "GuppiRaw Warning: the OBSNCHAN value is zero or missing. Fallback value is  OBSNCHAN=1!\n"
+      );
+      datashape->n_obschan = 1;
+    }
+    if(datashape->n_pol == 0) {
+      // some factor is zero!
+      fprintf(
+        stderr,
+        "GuppiRaw Warning: the NPOL value is zero or missing. Fallback value is  NPOL=1!\n"
+      );
+      datashape->n_pol = 1;
+    }
+    if(datashape->n_bit == 0) {
+      // some factor is zero!
+      fprintf(
+        stderr,
+        "GuppiRaw Warning: the NBITS value is zero or missing. Fallback value is  NBITS=4!\n"
+      );
+      datashape->n_bit = 4;
+    }
 
-  if(metadata->user_callback != 0) {
+    datashape->n_aspect = 1;
+    if(datashape->n_ant > 0) {
+      datashape->n_aspect = datashape->n_ant;
+    }
+    if(datashape->n_beam > 0) {
+      datashape->n_aspect = datashape->n_beam;
+    }
+    datashape->n_aspectchan = datashape->n_obschan/datashape->n_aspect;
+
+    datashape->bytestride_aspect = datashape->block_size/datashape->n_aspect;
+    datashape->bytestride_channel = datashape->bytestride_aspect/datashape->n_aspectchan;
+    
+    datashape->bytestride_polarization = (2*datashape->n_bit)/8; // TODO assert > 0
+    datashape->bytestride_time = datashape->n_pol*datashape->bytestride_polarization;
+
+    datashape->n_time = datashape->bytestride_channel / datashape->bytestride_time;
+  }
+
+  if(metadata->user_callback != NULL) {
     metadata->user_callback(entry, metadata->user_data);
   }
 }
@@ -54,10 +99,12 @@ void guppiraw_header_parse(guppiraw_header_t* header, char* header_string, int64
 	guppiraw_header_llnode_t* head = header->head;
 	
   while(
-    !guppiraw_header_entry_is_END((uint64_t*)header_string) && 
     (header_string_length >= 80 || header_string_length < 0)
   ) {
     guppiraw_header_parse_entry(header_string, &header->metadata);
+    if(guppiraw_header_entry_is_END((uint64_t*)header_string)){
+      break;
+    }
 
 		if(header->n_entries > 0) {
 			head->next = malloc(sizeof(guppiraw_header_llnode_t));
@@ -75,10 +122,12 @@ void guppiraw_header_parse(guppiraw_header_t* header, char* header_string, int64
 
 void guppiraw_header_string_parse_metadata(guppiraw_metadata_t* metadata, char* header_string, int64_t header_string_length) {
   while(
-    !guppiraw_header_entry_is_END((uint64_t*)header_string) && 
     (header_string_length >= 80 || header_string_length < 0)
   ) {
     guppiraw_header_parse_entry(header_string, metadata);
+    if(guppiraw_header_entry_is_END((uint64_t*)header_string)) {
+      break;
+    }
     header_string += 80;
     header_string_length -= 80;
   }

@@ -19,7 +19,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
   // with files opened with O_DIRECT.
   char entries[GUPPI_RAW_HEADER_DIGEST_BYTES] __attribute__ ((aligned (512)));
   char *entry = entries;
-  while(!guppiraw_header_entry_is_END((uint64_t*)entry) && header_entry_count < GUPPI_RAW_HEADER_MAX_ENTRIES) {
+  while(header_entry_count < GUPPI_RAW_HEADER_MAX_ENTRIES) {
 
     if(header_entry_count%GUPPI_RAW_HEADER_DIGEST_ENTRIES == 0){
       // read GUPPI_RAW_HEADER_DIGEST_ENTRIES at a time
@@ -31,6 +31,9 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
 
     if(gr_blockinfo != NULL && parse) {
       guppiraw_header_parse_entry(entry, &gr_blockinfo->metadata);
+    }
+    if(guppiraw_header_entry_is_END((uint64_t*)entry)) {
+      break;
     }
     entry += 80;
     header_entry_count++;
@@ -67,41 +70,11 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
  */
 int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
   int rv = _guppiraw_parse_blockheader(fd, gr_blockinfo, 1);
-  if(rv == 0){
-    guppiraw_datashape_t* datashape = &gr_blockinfo->metadata.datashape;
-    if(datashape->block_size == 0) {
-      fprintf(stderr, "GuppiRaw Error: Header is missing a definition for `BLOCSIZE`.\n");
+  if(rv == 0) {
+    if(gr_blockinfo->metadata.datashape.block_size == 0) {
+      fprintf(stderr, "GuppiRaw Error: Header is missing a non-zero definition for `BLOCSIZE`.\n");
       return 2;
     }
-
-    if(datashape->n_obschan * datashape->n_pol * datashape->n_bit == 0) {
-      // some factor is zero!
-      fprintf(
-        stderr,
-        "GuppiRaw Warning: some dimension-lengths are zero, will fallback! [OBSNCHAN:%u->1, NPOL:%d->1, NBITS:%d->4]\n",
-        datashape->n_obschan, datashape->n_pol, datashape->n_bit
-      );
-      datashape->n_obschan = 1;
-      datashape->n_pol = 1;
-      datashape->n_bit = 4;
-    }
-
-    datashape->n_aspect = 1;
-    if(datashape->n_ant > 0) {
-      datashape->n_aspect = datashape->n_ant;
-    }
-    if(datashape->n_beam > 0) {
-      datashape->n_aspect = datashape->n_beam;
-    }
-    datashape->n_aspectchan = datashape->n_obschan/datashape->n_aspect;
-
-    datashape->bytestride_aspect = datashape->block_size/datashape->n_aspect;
-    datashape->bytestride_channel = datashape->bytestride_aspect/datashape->n_aspectchan;
-    
-    datashape->bytestride_polarization = (2*datashape->n_bit)/8; // TODO assert > 0
-    datashape->bytestride_time = datashape->n_pol*datashape->bytestride_polarization;
-
-    datashape->n_time = datashape->bytestride_channel / datashape->bytestride_time;
   }
   return rv;
 }
