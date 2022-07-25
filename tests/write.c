@@ -4,6 +4,17 @@
 #define ELAPSED_NS(start,stop) \
   (((int64_t)stop.tv_sec-start.tv_sec)*1000*1000*1000+(stop.tv_nsec-start.tv_nsec))
 
+typedef struct {
+	char obsid[72];
+	double chan_bw;
+} guppiraw_block_meta_t;
+
+void guppiraw_write_block_meta(guppiraw_header_t* header) {
+	guppiraw_block_meta_t* user_metadata = (guppiraw_block_meta_t*) header->metadata.user_data;
+	guppiraw_header_put_string(header, "OBSID", user_metadata->obsid);
+	guppiraw_header_put_double(header, "CHAN_BW", user_metadata->chan_bw);
+}
+
 int main(int argc, char const *argv[])
 {
 	char do_not_validate = 0;
@@ -50,9 +61,12 @@ int main(int argc, char const *argv[])
 	header.metadata.datashape.n_aspectchan = n_chan_perant;
 	header.metadata.datashape.block_size = block_bytesize;
 	header.metadata.directio = 1;
+	header.metadata.user_data = malloc(sizeof(guppiraw_block_meta_t));
+	
+	snprintf(((guppiraw_block_meta_t*)header.metadata.user_data)->obsid, 72, "Synth Observation");
+	((guppiraw_block_meta_t*)header.metadata.user_data)->chan_bw = 3.14159265;
 	guppiraw_header_put_metadata(&header);
-	guppiraw_header_put_string(&header, "OBSID", "Synth Observation");
-	guppiraw_header_put_double(&header, "CHAN_BW", 3.14159265);
+	guppiraw_write_block_meta(&header);
 
 	void* data __attribute__ ((aligned (512))) = memalign(512, block_bytesize);
 
