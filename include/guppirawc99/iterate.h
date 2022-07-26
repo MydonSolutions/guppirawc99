@@ -1,6 +1,8 @@
 #ifndef GUPPI_RAW_C99_ITERATE_H_
 #define GUPPI_RAW_C99_ITERATE_H_
 
+#include "guppirawc99/directio.h"
+
 #include <stdio.h>
 #include <malloc.h>
 #include <unistd.h>
@@ -12,8 +14,8 @@
 #include <limits.h>
 
 #include "guppirawc99/structs.h"
-#include "guppirawc99/directio.h"
 #include "guppirawc99/file.h"
+#include "guppirawc99/calculations.h"
 
 typedef struct {
 	int file_index;

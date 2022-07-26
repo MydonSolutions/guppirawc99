@@ -390,7 +390,7 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
       bytes_read += read(
         file_info->fd,
         buffer,
-        metadata->directio ? guppiraw_directio_align(datashape->block_size) : datashape->block_size
+        metadata->directio ? guppiraw_calc_directio_aligned(datashape->block_size) : datashape->block_size
       );
     }
     else {

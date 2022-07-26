@@ -39,13 +39,13 @@ long validate_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size_
   long bytes_invalid = repetitions*bytes_per_iter;
   char *iterate_buffer __attribute__ ((aligned (512))) = memalign(
     512,
-    guppiraw_directio_align(bytes_per_iter)
+    guppiraw_calc_directio_aligned(bytes_per_iter)
   );
 
   const size_t nblocks = ((time_index + repeat_time*ntime + datashape->n_time-1)/datashape->n_time);
   char *data_blocks __attribute__ ((aligned (512))) = memalign(
     512,
-    guppiraw_directio_align(datashape->block_size*nblocks)
+    guppiraw_calc_directio_aligned(datashape->block_size*nblocks)
   );
   
   guppiraw_file_info_t *file_info;
@@ -123,7 +123,7 @@ long benchmark_iteration(guppiraw_iterate_info_t *gr_iterate, size_t ntime, size
   
   void *buffer __attribute__ ((aligned (512))) = memalign(
     512,
-    guppiraw_directio_align(bytesize)
+    guppiraw_calc_directio_aligned(bytesize)
   );
   struct timespec start, stop;
 	uint64_t reading_ns = 0;

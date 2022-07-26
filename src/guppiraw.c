@@ -53,7 +53,7 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
   if(gr_blockinfo != NULL) {
     gr_blockinfo->file_data_pos = data_start_pos;
     if(gr_blockinfo->metadata.directio == 1) {
-      gr_blockinfo->file_data_pos = guppiraw_directio_align(gr_blockinfo->file_data_pos);
+      gr_blockinfo->file_data_pos = guppiraw_calc_directio_aligned(gr_blockinfo->file_data_pos);
     }
   }
   return 0;
@@ -110,7 +110,7 @@ int guppiraw_skim_file(guppiraw_file_info_t* gr_fileinfo) {
     return rv;
   }
   guppiraw_seek_next_block(fd, &tmp_blockinfo);
-  size_t bytesize_first_block = tmp_blockinfo.file_data_pos + guppiraw_directio_align(tmp_blockinfo.metadata.datashape.block_size);
+  size_t bytesize_first_block = tmp_blockinfo.file_data_pos + guppiraw_calc_directio_aligned(tmp_blockinfo.metadata.datashape.block_size);
   gr_fileinfo->n_block = (gr_fileinfo->bytesize_file + bytesize_first_block-1)/bytesize_first_block;
 
   gr_fileinfo->file_header_pos = malloc(gr_fileinfo->n_block * sizeof(off_t));
@@ -152,7 +152,7 @@ ssize_t guppiraw_write_block_batched(
   const size_t block_size = header->metadata.datashape.block_size;
   char* header_string = guppiraw_header_malloc_string(header);
   const size_t header_entries_len = (header->n_entries+1) * 80;
-  const size_t header_string_len = directio ? guppiraw_directio_align(header_entries_len) : header_entries_len;
+  const size_t header_string_len = directio ? guppiraw_calc_directio_aligned(header_entries_len) : header_entries_len;
 
   const long max_iovecs = sysconf(_SC_IOV_MAX);
   writev_parameters_t writev_params = {0};
@@ -195,7 +195,7 @@ ssize_t guppiraw_write_block_batched(
   }
 
   if(directio) {
-    const size_t directio_pad_length = guppiraw_directio_align(block_size) - block_size;
+    const size_t directio_pad_length = guppiraw_calc_directio_aligned(block_size) - block_size;
     if(writev_params.iovec_count > 0) {
       writev_params.iovecs[writev_params.iovec_count].iov_len += directio_pad_length;
     }

@@ -1,10 +1,7 @@
 #ifndef GUPPI_RAW_C99_H_
 #define GUPPI_RAW_C99_H_
 
-#ifndef _GNU_SOURCE
-#pragma message("_GNU_SOURCE not defined so DIRECTIO is disabled!") 
-#define O_DIRECT 0
-#endif
+#include "guppirawc99/directio.h"
 
 #include <stdio.h>
 #include <malloc.h>
@@ -22,7 +19,7 @@
 #include "guppirawc99/file.h"
 #include "guppirawc99/iterate.h"
 #include "guppirawc99/header.h"
-#include "guppirawc99/directio.h"
+#include "guppirawc99/calculations.h"
 
 /*
  * 
@@ -39,7 +36,7 @@ static inline int guppiraw_seek_next_block(int fd, const guppiraw_block_info_t* 
   return lseek(
     fd,
     gr_blockinfo->metadata.directio == 1 ? 
-      guppiraw_directio_align(gr_blockinfo->file_data_pos + gr_blockinfo->metadata.datashape.block_size) :
+      guppiraw_calc_directio_aligned(gr_blockinfo->file_data_pos + gr_blockinfo->metadata.datashape.block_size) :
       gr_blockinfo->file_data_pos + gr_blockinfo->metadata.datashape.block_size,
     0
   );

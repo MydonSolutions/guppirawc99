@@ -248,7 +248,7 @@ char* guppiraw_header_malloc_string(const guppiraw_header_t* header) {
   guppiraw_header_llnode_t* header_entry = header->head;
   char* header_string;
   if(directio) {
-    const size_t header_entries_len_aligned = guppiraw_directio_align(header_entries_len);
+    const size_t header_entries_len_aligned = guppiraw_calc_directio_aligned(header_entries_len);
     header_string = memalign(512, header_entries_len_aligned);
     memcpy(
       header_string + header_entries_len,
