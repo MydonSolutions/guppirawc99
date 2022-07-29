@@ -13,7 +13,6 @@
 #include <sys/uio.h>
 #include <limits.h>
 
-#include "fitsheader.h"
 #include "guppirawc99/structs.h"
 #include "guppirawc99/header_key.h"
 #include "guppirawc99/file.h"
