@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <assert.h>
-#include "guppiraw.h"
+#include "guppirawc99.h"
 
 int main(int argc, char const *argv[])
 {

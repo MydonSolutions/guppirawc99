@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
-#include "guppiraw.h"
+#include "guppirawc99.h"
 
 int main(){
 

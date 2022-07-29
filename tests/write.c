@@ -1,4 +1,4 @@
-#include "guppiraw.h"
+#include "guppirawc99.h"
 #include <time.h>
 
 #define ELAPSED_NS(start,stop) \

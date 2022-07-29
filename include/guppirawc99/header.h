@@ -12,6 +12,7 @@
 #include "guppirawc99/structs.h"
 #include "guppirawc99/header_key.h"
 #include "guppirawc99/directio.h"
+#include "guppirawc99/calculations.h"
 
 
 void guppiraw_header_parse_entry(const char* entry, guppiraw_metadata_t* metadata);

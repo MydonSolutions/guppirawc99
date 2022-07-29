@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "guppiraw.h"
+#include "guppirawc99.h"
 
 typedef struct {
   double chan_bw;
