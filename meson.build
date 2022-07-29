@@ -1,5 +1,5 @@
 project('guppirawc99', 'c',
-  version: '1.8.0',
+  version: '1.8.1',
   default_options: [
     'c_std=c99',
     'buildtype=release',
