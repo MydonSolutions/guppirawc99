@@ -186,7 +186,7 @@ ssize_t guppiraw_write_block_batched(
             fprintf(stderr, "writev() error: %ld (@ %lu, %lu, %lu)\n", _bytes_written, aspect_batch_i, batch_aspect_i, chan_batch_i);
             return _bytes_written;
           }
-          bytes_written += bytes_written;
+          bytes_written += _bytes_written;
           
           writev_params.iovec_count = 0;
         }
