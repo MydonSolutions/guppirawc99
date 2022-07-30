@@ -141,6 +141,16 @@ typedef struct {
   int iovec_count;
 } writev_parameters_t;
 
+char* _guppiraw_writev_parameters_header(writev_parameters_t* params, const guppiraw_header_t* header) {
+  char* header_string = guppiraw_header_malloc_string(header);
+  const size_t header_entries_len = (header->n_entries+1) * 80;
+
+  params->iovecs[0].iov_base = header_string;
+  params->iovecs[0].iov_len = header->metadata.directio ? guppiraw_calc_directio_aligned(header_entries_len) : header_entries_len;
+  params->iovec_count = 1;
+  return header_string;
+}
+
 ssize_t guppiraw_write_block_batched(
   const int fd,
   const guppiraw_header_t* header,
@@ -148,20 +158,15 @@ ssize_t guppiraw_write_block_batched(
   const size_t n_aspect_batch,
   const size_t n_chan_batch
 ) {
-  const char directio = header->metadata.directio;
-  const size_t block_size = header->metadata.datashape.block_size;
-  char* header_string = guppiraw_header_malloc_string(header);
-  const size_t header_entries_len = (header->n_entries+1) * 80;
-  const size_t header_string_len = directio ? guppiraw_calc_directio_aligned(header_entries_len) : header_entries_len;
-
   const long max_iovecs = sysconf(_SC_IOV_MAX);
   writev_parameters_t writev_params = {0};
   writev_params.iovecs = malloc(max_iovecs * sizeof(struct iovec));
   writev_params.iovec_count = 0;
 
-  writev_params.iovecs[0].iov_base = header_string;
-  writev_params.iovecs[0].iov_len = header_string_len;
-  writev_params.iovec_count++;
+  char* header_string = _guppiraw_writev_parameters_header(&writev_params, header);
+
+  const char directio = header->metadata.directio;
+  const size_t block_size = header->metadata.datashape.block_size;
 
   const size_t n_batched_aspect = header->metadata.datashape.n_aspect / n_aspect_batch;
   const size_t aspect_batch_block_size = block_size / n_aspect_batch;
@@ -196,6 +201,75 @@ ssize_t guppiraw_write_block_batched(
 
   if(directio) {
     const size_t directio_pad_length = guppiraw_calc_directio_aligned(block_size) - block_size;
+    if(writev_params.iovec_count > 0) {
+      writev_params.iovecs[writev_params.iovec_count].iov_len += directio_pad_length;
+    }
+    else {
+        writev_params.iovecs[writev_params.iovec_count].iov_base = data;
+        writev_params.iovecs[writev_params.iovec_count].iov_len = directio_pad_length;
+        writev_params.iovec_count++;
+    }
+  }
+  bytes_written += writev(fd, writev_params.iovecs, writev_params.iovec_count);
+
+  free(header_string);
+  free(writev_params.iovecs);
+  return bytes_written;
+}
+
+ssize_t guppiraw_write_block_arbitrary(
+  const int fd,
+  const guppiraw_header_t* header,
+  const void* data,
+  const size_t bytestride_aspect,
+  const size_t bytestride_channel,
+  const size_t bytestride_time,
+  const size_t bytestride_polarization
+) {
+  const long max_iovecs = sysconf(_SC_IOV_MAX);
+  writev_parameters_t writev_params = {0};
+  writev_params.iovecs = malloc(max_iovecs * sizeof(struct iovec));
+  writev_params.iovec_count = 0;
+
+  char* header_string = _guppiraw_writev_parameters_header(&writev_params, header);
+
+  const char directio = header->metadata.directio;
+  const guppiraw_datashape_t* datashape = &header->metadata.datashape;
+  const size_t sample_size = (datashape->n_bit * 2)/8;
+
+  size_t aspect_i, time_i, polarization_i, channel_i;
+  ssize_t bytes_written = 0;
+  for(aspect_i = 0; aspect_i < datashape->n_aspect; aspect_i++){
+    for(channel_i = 0; channel_i < datashape->n_aspectchan; channel_i++){
+      for(time_i = 0; time_i < datashape->n_time; time_i++){
+        for(polarization_i = 0; polarization_i < datashape->n_pol; polarization_i++){
+
+          writev_params.iovecs[writev_params.iovec_count].iov_base = data
+            + aspect_i * bytestride_aspect
+            + time_i * bytestride_time
+            + polarization_i * bytestride_polarization
+            + channel_i * bytestride_channel;
+
+          writev_params.iovecs[writev_params.iovec_count].iov_len = sample_size;
+          writev_params.iovec_count++;
+          if(writev_params.iovec_count == max_iovecs) {
+            const ssize_t _bytes_written = writev(fd, writev_params.iovecs, writev_params.iovec_count);
+            if(_bytes_written <= 0) {
+              fprintf(stderr, "writev() error: %ld (@ %lu, %lu, %lu, %lu)\n", _bytes_written, aspect_i, time_i, polarization_i, channel_i);
+              return _bytes_written;
+            }
+            bytes_written += _bytes_written;
+
+            writev_params.iovec_count = 0;
+          }
+
+        }
+      }
+    }
+  }
+
+  if(directio) {
+    const size_t directio_pad_length = guppiraw_calc_directio_aligned(datashape->block_size) - datashape->block_size;
     if(writev_params.iovec_count > 0) {
       writev_params.iovecs[writev_params.iovec_count].iov_len += directio_pad_length;
     }
