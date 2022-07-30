@@ -302,6 +302,6 @@ char* guppiraw_header_malloc_string(const guppiraw_header_t* header) {
     memcpy(header_string + i*80, header_entry->keyvalue, 80);
     header_entry = header_entry->next;
   }
-  memcpy(header_string + n_entries*80, GUPPI_RAW_HEADER_END_STR, 80);
+  strncpy(header_string + n_entries*80, GUPPI_RAW_HEADER_END_STR, 80);
   return header_string;
 }
