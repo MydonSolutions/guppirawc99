@@ -185,6 +185,22 @@ static inline void _guppiraw_header_ensure_initialised(guppiraw_header_t* header
   }
 }
 
+void guppiraw_header_extend_parse(guppiraw_header_t* header, char* header_string, int64_t header_string_length) {	
+  _guppiraw_header_ensure_initialised(header, header_string);
+  while(
+    (header_string_length >= 80 || header_string_length < 0)
+  ) {
+    guppiraw_header_parse_entry(header_string, &header->metadata);
+    if(guppiraw_header_entry_is_END((uint64_t*)header_string)){
+      break;
+    }
+    _guppiraw_header_put_string(header->head, header_string, header_string + 9);
+
+    header_string += 80;
+    header_string_length -= 80;
+  }
+}
+
 int guppiraw_header_put_string(guppiraw_header_t* header, const char* key, const char* value) {
   _guppiraw_header_ensure_initialised(header, key);
   header->n_entries += _guppiraw_header_put_string(header->head, key, value);
@@ -221,6 +237,28 @@ int guppiraw_header_put_metadata(guppiraw_header_t* header) {
   return 0;
 }
 
+void guppiraw_header_copy(guppiraw_header_t* dst, guppiraw_header_t* src) {
+  if(dst->n_entries > 0) {
+    guppiraw_header_free(dst);
+  }
+  guppiraw_header_llnode_t* src_head = src->head;
+  dst->head = malloc(sizeof(guppiraw_header_llnode_t));
+  guppiraw_header_llnode_t* dst_head = dst->head;
+  dst_head->next = NULL;
+
+  while(src_head != NULL) {
+    memcpy(dst_head->keyvalue, src_head->keyvalue, 80);
+
+    if(src_head->next != NULL) {
+      dst_head->next = malloc(sizeof(guppiraw_header_llnode_t));
+      dst_head = dst_head->next;
+    }
+    dst->n_entries += 1;
+    src_head = src_head->next;
+  }
+  memcpy(&dst->metadata, &src->metadata, sizeof(guppiraw_metadata_t));
+  dst_head->next = NULL;
+}
 
 void _guppiraw_header_free(guppiraw_header_llnode_t* head) {
   if(head->next != NULL) {

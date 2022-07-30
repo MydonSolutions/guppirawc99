@@ -38,6 +38,10 @@ int guppiraw_header_put_metadata(guppiraw_header_t* header);
 
 // Negative `header_length` indicates no hard limit on `header_string` length
 void guppiraw_header_parse(guppiraw_header_t* header, char* header_string, int64_t header_string_length);
+void guppiraw_header_extend_parse(guppiraw_header_t* header, char* header_string, int64_t header_string_length);
+
+void guppiraw_header_copy(guppiraw_header_t* dst, guppiraw_header_t* src);
+
 void guppiraw_header_free(guppiraw_header_t* header);
 
 char* guppiraw_header_malloc_string(const guppiraw_header_t* header);
