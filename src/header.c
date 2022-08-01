@@ -225,13 +225,14 @@ int guppiraw_header_put_metadata(guppiraw_header_t* header) {
 	  guppiraw_header_put_integer(header, "NBEAMS", header->metadata.datashape.n_beam);
     header->metadata.datashape.n_aspect = header->metadata.datashape.n_beam;
   }
+  header->metadata.datashape.n_obschan = header->metadata.datashape.n_aspectchan*header->metadata.datashape.n_aspect;
   header->metadata.datashape.block_size = (
-    header->metadata.datashape.n_aspect*header->metadata.datashape.n_aspectchan
+    header->metadata.datashape.n_obschan
     *header->metadata.datashape.n_time*header->metadata.datashape.n_pol
     *2*header->metadata.datashape.n_bit)/8
   ;
   
-	guppiraw_header_put_integer(header, "OBSNCHAN", header->metadata.datashape.n_aspect*header->metadata.datashape.n_aspectchan);
+	guppiraw_header_put_integer(header, "OBSNCHAN", header->metadata.datashape.n_obschan);
 	guppiraw_header_put_integer(header, "BLOCSIZE", header->metadata.datashape.block_size);
 	guppiraw_header_put_integer(header, "DIRECTIO", header->metadata.directio);
   return 0;
