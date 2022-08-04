@@ -283,26 +283,28 @@ const char _guppiraw_directio_padding_buffer[513] =
 char* guppiraw_header_malloc_string(const guppiraw_header_t* header) {
   const char directio = header->metadata.directio;
   const int n_entries = header->n_entries;
-  const size_t header_entries_len = (n_entries + 1) * 80;
+  size_t header_strlen = (n_entries + 1) * 80;
   guppiraw_header_llnode_t* header_entry = header->head;
   char* header_string;
   if(directio) {
-    const size_t header_entries_len_aligned = guppiraw_calc_directio_aligned(header_entries_len);
-    header_string = memalign(512, header_entries_len_aligned);
+    const size_t header_strlen_aligned = guppiraw_calc_directio_aligned(header_strlen);
+    header_string = memalign(512, header_strlen_aligned);
     memcpy(
-      header_string + header_entries_len,
+      header_string + header_strlen,
       _guppiraw_directio_padding_buffer,
-      header_entries_len_aligned - header_entries_len
+      header_strlen_aligned - header_strlen
     );
+    header_strlen = header_strlen_aligned;
   }
   else {
-    header_string = malloc(header_entries_len);
+    header_string = malloc(header_strlen);
   }
 
   for(int i = 0; i < n_entries; i++) {
     memcpy(header_string + i*80, header_entry->keyvalue, 80);
     header_entry = header_entry->next;
   }
-  strncpy(header_string + n_entries*80, GUPPI_RAW_HEADER_END_STR, 80);
+  memcpy(header_string + n_entries*80, GUPPI_RAW_HEADER_END_STR, 80);
+  header_string[header_strlen] = '\0';
   return header_string;
 }
