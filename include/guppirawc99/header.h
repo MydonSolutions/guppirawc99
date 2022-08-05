@@ -14,6 +14,7 @@
 #include "guppirawc99/directio.h"
 #include "guppirawc99/calculations.h"
 
+void guppiraw_header_datashape_process(guppiraw_datashape_t* datashape);
 
 void guppiraw_header_parse_entry(const char* entry, guppiraw_metadata_t* metadata);
 char guppiraw_header_entry_is_END(const uint64_t* entry_uint64);

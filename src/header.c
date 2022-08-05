@@ -28,8 +28,16 @@ void guppiraw_header_parse_entry(const char* entry, guppiraw_metadata_t* metadat
     hgeti4(entry, "DIRECTIO", &metadata->directio);
   else if(((uint64_t*)entry)[0] == KEY_UINT64_END) {
     // closing call for the header
-    guppiraw_datashape_t* datashape = &metadata->datashape;
-    if(datashape->n_obschan == 0) {
+    guppiraw_header_datashape_process(&metadata->datashape);
+  }
+
+  if(metadata->user_callback != NULL) {
+    metadata->user_callback(entry, metadata->user_data);
+  }
+}
+
+void guppiraw_header_datashape_process(guppiraw_datashape_t* datashape) {
+  if(datashape->n_obschan == 0) {
       // some factor is zero!
       fprintf(
         stderr,
@@ -70,11 +78,6 @@ void guppiraw_header_parse_entry(const char* entry, guppiraw_metadata_t* metadat
     datashape->bytestride_time = datashape->n_pol*datashape->bytestride_polarization;
 
     datashape->n_time = datashape->bytestride_channel / datashape->bytestride_time;
-  }
-
-  if(metadata->user_callback != NULL) {
-    metadata->user_callback(entry, metadata->user_data);
-  }
 }
 
 char guppiraw_header_entry_is_END(const uint64_t* entry_uint64) {
