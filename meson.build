@@ -7,6 +7,8 @@ project('guppirawc99', 'c',
   ]
 )
 
+add_project_arguments('-D_POSIX_C_SOURCE=199309L', language : 'c')
+
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required : true)
 

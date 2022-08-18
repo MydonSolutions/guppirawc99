@@ -2,6 +2,8 @@
 #define GUPPI_RAW_C99_CALCULATIONS_H_
 
 #include <stdlib.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 off_t guppiraw_calc_directio_aligned(off_t value);
 
