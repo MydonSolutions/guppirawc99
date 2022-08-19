@@ -19,7 +19,6 @@ Key 		 | Value | Default
 BLOCSIZE | The block's data byte-size. `integer` | **Critical Requirement**
 OBSNCHAN | Total number of channel, across all aspects. `integer > 0` | 1
 NANTS    | Number of antenna-aspects. `integer > 0` | 1
-NBEAMS   | Number of beam-aspects (overrules NANTS). `integer > 0` | 0
 NPOL     | Number of polarizations. `integer > 0` | 1
 NBITS    | Number of bits per complex-component. `integer > 0` | 4
 DIRECTIO | Header and Data are DIRECTIO (512) aligned with padding, or not. `integer [0, 1]` | 0

@@ -1,12 +1,11 @@
 #include "guppirawc99/header.h"
 
 static const uint64_t KEY_UINT64_BLOCSIZE  = GUPPI_RAW_KEY_UINT64_ID_LE('B','L','O','C','S','I','Z','E');
-static const uint64_t KEY_UINT64_NANTS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' ');
-static const uint64_t KEY_UINT64_NBEAMS    = GUPPI_RAW_KEY_UINT64_ID_LE('N','B','E','A','M','S',' ',' ');
 static const uint64_t KEY_UINT64_OBSNCHAN  = GUPPI_RAW_KEY_UINT64_ID_LE('O','B','S','N','C','H','A','N');
 static const uint64_t KEY_UINT64_NPOL      = GUPPI_RAW_KEY_UINT64_ID_LE('N','P','O','L',' ',' ',' ',' ');
 static const uint64_t KEY_UINT64_NBITS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','B','I','T','S',' ',' ',' ');
 static const uint64_t KEY_UINT64_DIRECTIO  = GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O');
+static const uint64_t KEY_UINT64_NANTS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' ');
 
 static const uint64_t KEY_UINT64_END  = GUPPI_RAW_KEY_UINT64_ID_LE('E','N','D',' ',' ',' ',' ',' ');
 static const uint64_t _UINT64_BLANK   = GUPPI_RAW_KEY_UINT64_ID_LE(' ',' ',' ',' ',' ',' ',' ',' ');
@@ -15,9 +14,7 @@ void guppiraw_header_parse_entry(const char* entry, guppiraw_metadata_t* metadat
   if(((uint64_t*)entry)[0] == KEY_UINT64_BLOCSIZE)
     hgetu8(entry, "BLOCSIZE", &metadata->datashape.block_size);
   else if(((uint64_t*)entry)[0] == KEY_UINT64_NANTS)
-    hgetu4(entry, "NANTS", &metadata->datashape.n_ant);
-  else if(((uint64_t*)entry)[0] == KEY_UINT64_NBEAMS)
-    hgetu4(entry, "NBEAMS", &metadata->datashape.n_beam);
+    hgetu4(entry, "NANTS", &metadata->datashape.n_aspect);
   else if(((uint64_t*)entry)[0] == KEY_UINT64_OBSNCHAN)
     hgetu4(entry, "OBSNCHAN", &metadata->datashape.n_obschan);
   else if(((uint64_t*)entry)[0] == KEY_UINT64_NPOL)
@@ -61,13 +58,8 @@ void guppiraw_header_datashape_process(guppiraw_datashape_t* datashape) {
       );
       datashape->n_bit = 4;
     }
-
-    datashape->n_aspect = 1;
-    if(datashape->n_ant > 0) {
-      datashape->n_aspect = datashape->n_ant;
-    }
-    if(datashape->n_beam > 0) {
-      datashape->n_aspect = datashape->n_beam;
+    if (datashape->n_aspect <= 0) {
+      datashape->n_aspect = 1;
     }
     datashape->n_aspectchan = datashape->n_obschan/datashape->n_aspect;
 
@@ -222,12 +214,10 @@ int guppiraw_header_put_integer(guppiraw_header_t* header, const char* key, cons
 int guppiraw_header_put_metadata(guppiraw_header_t* header) {
 	guppiraw_header_put_integer(header, "NBITS", header->metadata.datashape.n_bit);
 	guppiraw_header_put_integer(header, "NPOL", header->metadata.datashape.n_pol);
-	guppiraw_header_put_integer(header, "NANTS", header->metadata.datashape.n_ant);
-  header->metadata.datashape.n_aspect = header->metadata.datashape.n_ant;
-  if(header->metadata.datashape.n_beam > 0) {
-	  guppiraw_header_put_integer(header, "NBEAMS", header->metadata.datashape.n_beam);
-    header->metadata.datashape.n_aspect = header->metadata.datashape.n_beam;
+  if (header->metadata.datashape.n_aspect <= 0) {
+    header->metadata.datashape.n_aspect = 1;
   }
+	guppiraw_header_put_integer(header, "NANTS", header->metadata.datashape.n_aspect);
   header->metadata.datashape.n_obschan = header->metadata.datashape.n_aspectchan*header->metadata.datashape.n_aspect;
   header->metadata.datashape.block_size = (
     header->metadata.datashape.n_obschan

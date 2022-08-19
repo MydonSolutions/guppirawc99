@@ -56,8 +56,8 @@ int main(int argc, char const *argv[])
 	guppiraw_header_t header = {0};
 	header.metadata.datashape.n_bit = n_bits;
 	header.metadata.datashape.n_pol = n_pols;
-	header.metadata.datashape.n_ant = n_ant;
 	header.metadata.datashape.n_time = n_time;
+	header.metadata.datashape.n_aspect = n_ant;
 	header.metadata.datashape.n_aspectchan = n_chan_perant;
 	header.metadata.datashape.block_size = block_bytesize;
 	header.metadata.directio = 1;

@@ -4,8 +4,6 @@
 typedef struct {
   // Header populated fields
   uint32_t n_obschan;
-  uint32_t n_ant;
-  uint32_t n_beam;
   uint32_t n_pol;
   uint32_t n_bit;
   uint64_t block_size;

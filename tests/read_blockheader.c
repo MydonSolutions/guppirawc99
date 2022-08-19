@@ -33,8 +33,7 @@ int main(int argc, char const *argv[])
       printf("\tn_pol: %u\n", metadata->datashape.n_pol);
       printf("\tn_bit: %u\n", metadata->datashape.n_bit);
       printf("\tn_time: %lu\n", metadata->datashape.n_time);
-      printf("\tn_ant: %d\n", metadata->datashape.n_ant);
-      printf("\tn_beam: %d\n", metadata->datashape.n_beam);
+      printf("\tn_aspect: %d\n", metadata->datashape.n_aspect);
       printf("\tchan_bw: %f\n", ((guppiraw_block_meta_t*)metadata->user_data)->chan_bw);
       block_id ++;
       guppiraw_seek_next_block(raw_fd, &gr_blockinfo);
