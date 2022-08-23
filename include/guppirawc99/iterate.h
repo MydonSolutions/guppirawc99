@@ -51,6 +51,14 @@ typedef struct {
  */
 int guppiraw_skim_file(guppiraw_file_info_t* gr_fileinfo);
 
+/*
+ * Returns (status_code applies to last file opened):
+ *  0 : Successfully parsed the first and skimmed all the other headers in the file
+ *  -X: `read(...)` returned 0 before `GUPPI_RAW_HEADER_END_STR` for Block X
+ *  2 : First Header is inappropriate (missing `BLOCSIZE`)
+ *  3 : Could not open the file `"%s.%04d.raw": gr_iterate->stempath, gr_iterate->fileenum_offset`
+ *  X : `GUPPI_RAW_HEADER_END_STR` not seen in `GUPPI_RAW_HEADER_MAX_ENTRIES` for Block X
+ */
 int guppiraw_iterate_open_with_user_metadata(
   guppiraw_iterate_info_t* gr_iterate,
   const char* filepath,
