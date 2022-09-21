@@ -153,7 +153,9 @@ guppiraw_file_info_t* guppiraw_iterate_file_info_of_block_offset(
 ) {
   *block_index += gr_iterate->block_index;
   guppiraw_file_info_t* rv = guppiraw_iterate_file_info_of_block(gr_iterate, block_index);
-  *block_index -= rv->block_index;
+  if(rv != NULL) {
+    *block_index -= rv->block_index;
+  }
   return rv;
 }
 
@@ -199,6 +201,9 @@ static inline long _guppiraw_read_time_span(
     const size_t time_index = gr_iterate->time_index + time_i*time_step;
     fileblock_indexoffset = time_index / datashape->n_time;
     file_info = guppiraw_iterate_file_info_of_block_offset(gr_iterate, &fileblock_indexoffset);
+    if(file_info == NULL) {
+      return -fileblock_indexoffset;
+    }
 
     const size_t fd_time_offset_chan_index = 
       guppiraw_file_data_pos_offset(file_info, fileblock_indexoffset) + 
@@ -292,6 +297,9 @@ static inline long _guppiraw_read_time_gap(
     const size_t time_index = gr_iterate->time_index + time_i*time_step;
     fileblock_indexoffset = time_index / datashape->n_time;
     file_info = guppiraw_iterate_file_info_of_block_offset(gr_iterate, &fileblock_indexoffset);
+    if(file_info == NULL) {
+      return -fileblock_indexoffset;
+    }
 
     for (size_t aspect_i = 0; aspect_i < aspect_steps; aspect_i++) {
       for (size_t chan_i = 0; chan_i < chan_steps; chan_i++) {
@@ -416,7 +424,6 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
 
         // check that time request is a factor of remaining file_ntime
         if(guppiraw_file_ntime_remaining(file_info) < ntime) {
-          // TODO handle 2 files at a time.
           fprintf(
             stderr,
             "Error: remaining file_ntime (%d*%lu-%lu) is less than iteration time (%lu).\n",
