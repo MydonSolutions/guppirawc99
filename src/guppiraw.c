@@ -89,6 +89,12 @@ int guppiraw_skim_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
   return _guppiraw_parse_blockheader(fd, gr_blockinfo, 0);
 }
 
+typedef struct _block_pos_ll {
+  off_t header_pos;
+  off_t data_pos;
+  struct _block_pos_ll *next;
+} _block_pos_ll_t;
+
 /*
  * Returns:
  *  -X: `read(...)` returned 0 before `GUPPI_RAW_HEADER_END_STR` for Block X
@@ -102,36 +108,51 @@ int guppiraw_skim_file(guppiraw_file_info_t* gr_fileinfo) {
   tmp_blockinfo.metadata.user_callback = gr_fileinfo->metadata.user_callback;
   const int fd = gr_fileinfo->fd;
 
-  gr_fileinfo->bytesize_file = lseek(fd, 0, SEEK_END);
-  lseek(fd, 0, SEEK_SET);
-
   int rv = guppiraw_read_blockheader(fd, &tmp_blockinfo);
   if(rv){
     return rv;
   }
-  guppiraw_seek_next_block(fd, &tmp_blockinfo);
-  size_t bytesize_first_block = tmp_blockinfo.file_data_pos + guppiraw_calc_directio_aligned(tmp_blockinfo.metadata.datashape.block_size);
-  gr_fileinfo->n_block = (gr_fileinfo->bytesize_file + bytesize_first_block-1)/bytesize_first_block;
+  memcpy(&gr_fileinfo->metadata, &tmp_blockinfo.metadata, sizeof(guppiraw_metadata_t));
+  gr_fileinfo->n_block = 1;
+  gr_fileinfo->bytesize_file = lseek(fd, 0, SEEK_END);
+
+  _block_pos_ll_t *block_cur = NULL, *block_ll_head;
+  block_ll_head = malloc(sizeof(_block_pos_ll_t));
+  block_ll_head->header_pos = tmp_blockinfo.file_header_pos;
+  block_ll_head->data_pos = tmp_blockinfo.file_data_pos;
+  block_cur = block_ll_head;
+
+  while(guppiraw_seek_next_block(fd, &tmp_blockinfo) < gr_fileinfo->bytesize_file) {
+    gr_fileinfo->block_index = gr_fileinfo->n_block;
+
+    block_cur->next = malloc(sizeof(_block_pos_ll_t));
+    block_cur = block_cur->next;
+    gr_fileinfo->n_block += 1;
+
+    rv = guppiraw_skim_blockheader(fd, &tmp_blockinfo);
+    block_cur->header_pos = tmp_blockinfo.file_header_pos;
+    block_cur->data_pos = tmp_blockinfo.file_data_pos;
+
+    if(rv != 0) {
+      rv *= gr_fileinfo->block_index;
+      break;
+    }
+  }
+
+  if(rv == 0) {
+    gr_fileinfo->block_index = 0;
+  }
 
   gr_fileinfo->file_header_pos = malloc(gr_fileinfo->n_block * sizeof(off_t));
   gr_fileinfo->file_data_pos = malloc(gr_fileinfo->n_block * sizeof(off_t));
-  gr_fileinfo->file_header_pos[0] = tmp_blockinfo.file_header_pos;
-  gr_fileinfo->file_data_pos[0] = tmp_blockinfo.file_data_pos;
 
-  memcpy(&gr_fileinfo->metadata, &tmp_blockinfo.metadata, sizeof(guppiraw_metadata_t));
-
-  for(int i = 1; i < gr_fileinfo->n_block; i++) {
-    rv = guppiraw_skim_blockheader(fd, &tmp_blockinfo);
-    if(rv != 0) {
-      rv *= i;
-      gr_fileinfo->n_block = i;
-      break;
-    }
-    gr_fileinfo->file_header_pos[i] = tmp_blockinfo.file_header_pos;
-    gr_fileinfo->file_data_pos[i] = tmp_blockinfo.file_data_pos;
-    guppiraw_seek_next_block(fd, &tmp_blockinfo);
+  for(int i = 0; i < gr_fileinfo->n_block; i++) {
+    gr_fileinfo->file_header_pos[i] = block_ll_head->header_pos;
+    gr_fileinfo->file_data_pos[i] = block_ll_head->data_pos;
+    block_cur = block_ll_head;
+    block_ll_head = block_ll_head->next;
+    free(block_cur);
   }
-  gr_fileinfo->block_index = 0;
 
   return rv;
 }

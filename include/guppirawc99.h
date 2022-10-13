@@ -31,7 +31,7 @@
 int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
 int guppiraw_skim_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo);
 
-static inline int guppiraw_seek_next_block(int fd, const guppiraw_block_info_t* gr_blockinfo) {
+static inline off_t guppiraw_seek_next_block(int fd, const guppiraw_block_info_t* gr_blockinfo) {
   return lseek(
     fd,
     gr_blockinfo->metadata.directio == 1 ? 
