@@ -39,6 +39,8 @@ typedef struct {
   size_t time_index;
   size_t chan_index;
   size_t aspect_index;
+
+  char iterate_time_first_not_frequency_first;
 } guppiraw_iterate_info_t;
 
 /*
@@ -83,7 +85,7 @@ int guppiraw_iterate_file_index_of_block_offset(const guppiraw_iterate_info_t* g
 guppiraw_file_info_t* guppiraw_iterate_file_info_of_block(const guppiraw_iterate_info_t* gr_iterate, int* block_index);
 guppiraw_file_info_t* guppiraw_iterate_file_info_of_block_offset(const guppiraw_iterate_info_t* gr_iterate, int* block_index);
 
-static inline long guppiraw_iterate_read_block(guppiraw_iterate_info_t* gr_iterate, void* buffer) {
+static inline long guppiraw_iterate_read_block(guppiraw_iterate_info_t* gr_iterate,void* buffer) {
   return guppiraw_iterate_read(
     gr_iterate,
     guppiraw_iterate_datashape(gr_iterate)->n_time,

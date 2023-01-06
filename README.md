@@ -38,7 +38,11 @@ This library enables arbitrary iteration over the data in a GUPPI RAW stem via `
 
 `long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer);`
 
-Iteration will exhaust the aspect-channels (`n_aspectchan`), then the aspects (`n_aspect`) and only then the time (`n_time`) dimension of the stem. Each iteration steps through the underlying data as defined by the `ntime, nchan, naspect` parameters:
+The `*buffer` parameter is expected to be appropriately large, with the provided `guppiraw_iterate_bytesize` defining the calculation.
+
+### Iterate Frequency First (Default)
+
+If the `guppiraw_iterate_info_t.iterate_time_first_not_frequency_first == false`, iteration will exhaust the aspect-channels (`n_aspectchan`), then the aspects (`n_aspect`) and only then the time (`n_time`) dimension of the stem. Each iteration steps through the underlying data as defined by the `ntime, nchan, naspect` parameters:
 
 ```
 for time = 0; time + ntime <= n_time; time += ntime
@@ -47,7 +51,17 @@ for time = 0; time + ntime <= n_time; time += ntime
 			...
 ```
 
-The `*buffer` parameter is expected to be appropriately large, with the provided `guppiraw_iterate_bytesize` defining the calculation.
+### Iterate Time First
+
+Otherwise, if the `guppiraw_iterate_info_t.iterate_time_first_not_frequency_first == true`, iteration will exhaust the time (`n_time`), then the aspects (`n_aspect`) and only then the aspect-channels (`n_aspectchan`) dimension of the stem. Each iteration steps through the underlying data as defined by the `ntime, nchan, naspect` parameters:
+
+```
+for channel = 0; channel < n_aspectchan; channel += nchan
+	for aspect = 0; aspect < n_aspect; aspect += naspect
+			for time = 0; time + ntime <= n_time; time += ntime
+			...
+```
+
 
 ## Compilation
 

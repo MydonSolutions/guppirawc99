@@ -358,7 +358,7 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
 	if((datashape->n_aspect - gr_iterate->aspect_index) % naspect != 0) {
     fprintf(
 			stderr,
-			"Error: channel dimension step is not a factor: n_aspect - aspect_index (%u - %ld) %% (%ld) naspect != 0.\n",
+			"Error: aspect dimension step is not a factor: n_aspect - aspect_index (%u - %ld) %% (%ld) naspect != 0.\n",
 			datashape->n_aspect, gr_iterate->aspect_index, naspect
 		);
     return -1;
@@ -456,24 +456,63 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
       }
     }
   }
-  
-  if(gr_iterate->chan_index + nchan >= datashape->n_aspectchan) {
-    if(gr_iterate->aspect_index + naspect >= datashape->n_aspect) {
-      if(gr_iterate->time_index + ntime >= datashape->n_time) {
-        const int block_increment = (gr_iterate->time_index + ntime) / datashape->n_time;
-        int fileblock_offset = block_increment;
-        const int file_index = guppiraw_iterate_file_index_of_block_offset(gr_iterate, &fileblock_offset);
-        for(; gr_iterate->file_index != file_index; gr_iterate->file_index++) {
-          gr_iterate->file_info[gr_iterate->file_index].block_index = gr_iterate->file_info[gr_iterate->file_index].n_block;
-        }
-        gr_iterate->block_index += block_increment;
-        gr_iterate->file_info[gr_iterate->file_index].block_index += fileblock_offset;
+
+  if(gr_iterate->iterate_time_first_not_frequency_first != 0) {
+
+    if(gr_iterate->time_index + ntime >= datashape->n_time) {
+      const int block_increment = (gr_iterate->time_index + ntime) / datashape->n_time;
+      int fileblock_offset = block_increment;
+      const int file_index = guppiraw_iterate_file_index_of_block_offset(gr_iterate, &fileblock_offset);
+      for(; gr_iterate->file_index != file_index; gr_iterate->file_index++) {
+        gr_iterate->file_info[gr_iterate->file_index].block_index = gr_iterate->file_info[gr_iterate->file_index].n_block;
       }
-      gr_iterate->time_index = (gr_iterate->time_index + ntime) % datashape->n_time;
+      gr_iterate->block_index += block_increment;
+      gr_iterate->file_info[gr_iterate->file_index].block_index += fileblock_offset;
+
+      if (gr_iterate->block_index >= gr_iterate->n_block) {
+        // Rewind to time=0
+        while(gr_iterate->file_index != 0) {
+          gr_iterate->file_info[gr_iterate->file_index].block_index = 0;
+          gr_iterate->file_index--;
+        }
+        
+        gr_iterate->file_info[gr_iterate->file_index].block_index = 0;
+        gr_iterate->block_index = 0;
+        gr_iterate->time_index = 0;
+
+        // iterate slower dimensions
+        if(gr_iterate->aspect_index + naspect >= datashape->n_aspect) {
+          if(gr_iterate->chan_index + nchan >= datashape->n_aspectchan) {
+          }
+          gr_iterate->chan_index = (gr_iterate->chan_index + nchan) % datashape->n_aspectchan;
+        }
+        gr_iterate->aspect_index = (gr_iterate->aspect_index + naspect) % datashape->n_aspect;
+      }
     }
-    gr_iterate->aspect_index = (gr_iterate->aspect_index + naspect) % datashape->n_aspect;
+    gr_iterate->time_index = (gr_iterate->time_index + ntime) % datashape->n_time;
+
   }
-  gr_iterate->chan_index = (gr_iterate->chan_index + nchan) % datashape->n_aspectchan;
+  else {
+
+    if(gr_iterate->chan_index + nchan >= datashape->n_aspectchan) {
+      if(gr_iterate->aspect_index + naspect >= datashape->n_aspect) {
+        if(gr_iterate->time_index + ntime >= datashape->n_time) {
+          const int block_increment = (gr_iterate->time_index + ntime) / datashape->n_time;
+          int fileblock_offset = block_increment;
+          const int file_index = guppiraw_iterate_file_index_of_block_offset(gr_iterate, &fileblock_offset);
+          for(; gr_iterate->file_index != file_index; gr_iterate->file_index++) {
+            gr_iterate->file_info[gr_iterate->file_index].block_index = gr_iterate->file_info[gr_iterate->file_index].n_block;
+          }
+          gr_iterate->block_index += block_increment;
+          gr_iterate->file_info[gr_iterate->file_index].block_index += fileblock_offset;
+        }
+        gr_iterate->time_index = (gr_iterate->time_index + ntime) % datashape->n_time;
+      }
+      gr_iterate->aspect_index = (gr_iterate->aspect_index + naspect) % datashape->n_aspect;
+    }
+    gr_iterate->chan_index = (gr_iterate->chan_index + nchan) % datashape->n_aspectchan;
+
+  }
 
   return bytes_read;
 }
