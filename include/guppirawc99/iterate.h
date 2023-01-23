@@ -54,6 +54,12 @@ typedef struct {
 int guppiraw_skim_file(guppiraw_file_info_t* gr_fileinfo);
 
 /*
+ * If the filepath provided cannot be opened (i.e. if it is not a singular file),
+ * it is deemed the stem-filepath:
+ *   Opens at most gr_iterate->n_file if n_file > 0, otherwise 10000.
+ *   Starts at fileenum_offset and increments.
+ * Otherwise just the single filepath provided is opened.
+ *
  * Returns (status_code applies to last file opened):
  *  0 : Successfully parsed the first and skimmed all the other headers in the file
  *  -X: `read(...)` returned 0 before `GUPPI_RAW_HEADER_END_STR` for Block X

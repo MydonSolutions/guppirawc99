@@ -16,7 +16,8 @@ int _guppiraw_iterate_open(
   char* filepath = malloc(gr_iterate->stempath_len+9+1);
   int fd;
   gr_iterate->n_block = 0;
-  for(gr_iterate->n_file = 0; gr_iterate->n_file < 10000; gr_iterate->n_file++) {
+  const int n_file_limit = gr_iterate->n_file <= 0 ? 10000 : gr_iterate->n_file;
+  for(gr_iterate->n_file = 0; gr_iterate->n_file < n_file_limit; gr_iterate->n_file++) {
     sprintf(filepath, "%s.%04d.raw", gr_iterate->stempath, gr_iterate->n_file + gr_iterate->fileenum_offset);
     fd = open(filepath, O_RDONLY);
     if(fd <= 0) {
@@ -97,6 +98,7 @@ int guppiraw_iterate_open_with_user_metadata(
     // `filepath` is the `filestem.\d{4}.raw`
     gr_iterate->stempath_len = strlen(filepath)-9;
     gr_iterate->fileenum_offset = atoi(filepath + gr_iterate->stempath_len + 1);
+    gr_iterate->n_file = 1;
   }
 
   gr_iterate->stempath = malloc(gr_iterate->stempath_len+1);
