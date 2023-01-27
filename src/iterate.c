@@ -345,7 +345,7 @@ static inline long _guppiraw_read_time_gap(
  *  0 : Could not open the subsequent file
  *  X : Bytes read 
  */
-long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer) {
+long guppiraw_iterate_peek(const guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer) {
   const guppiraw_file_info_t* file_info = guppiraw_iterate_file_info_current(gr_iterate);  
   const guppiraw_metadata_t* metadata = &file_info->metadata;  
   const guppiraw_datashape_t* datashape = &metadata->datashape;
@@ -400,7 +400,7 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
       );
     }
     else {
-      // interleave time-slice reads for different channels (maintain frequency as slowest axis)
+      // interleave time-slice reads for different channels (maintain channel as slowest axis)
       const size_t chan_step = ntime != datashape->n_time ? 1 : nchan;
       const size_t aspect_step = ntime != datashape->n_time || nchan != datashape->n_aspectchan ? 1 : naspect;
 
@@ -458,63 +458,94 @@ long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t nti
       }
     }
   }
+  return bytes_read;
+}
 
-  if(gr_iterate->iterate_time_first_not_frequency_first != 0) {
+uint8_t guppiraw_iterate_increment_in_time(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect) {
+  const guppiraw_file_info_t* file_info = guppiraw_iterate_file_info_current(gr_iterate);  
+  const guppiraw_metadata_t* metadata = &file_info->metadata;  
+  const guppiraw_datashape_t* datashape = &metadata->datashape;
+  uint8_t exhausted = 0;
 
-    if(gr_iterate->time_index + ntime >= datashape->n_time) {
-      const int block_increment = (gr_iterate->time_index + ntime) / datashape->n_time;
-      int fileblock_offset = block_increment;
-      const int file_index = guppiraw_iterate_file_index_of_block_offset(gr_iterate, &fileblock_offset);
-      for(; gr_iterate->file_index != file_index; gr_iterate->file_index++) {
-        gr_iterate->file_info[gr_iterate->file_index].block_index = gr_iterate->file_info[gr_iterate->file_index].n_block;
-      }
-      gr_iterate->block_index += block_increment;
-      gr_iterate->file_info[gr_iterate->file_index].block_index += fileblock_offset;
-
-      if (gr_iterate->block_index >= gr_iterate->n_block) {
-        // Rewind to time=0
-        while(gr_iterate->file_index != 0) {
-          gr_iterate->file_info[gr_iterate->file_index].block_index = 0;
-          gr_iterate->file_index--;
-        }
-        
-        gr_iterate->file_info[gr_iterate->file_index].block_index = 0;
-        gr_iterate->block_index = 0;
-        gr_iterate->time_index = 0;
-
-        // iterate slower dimensions
-        if(gr_iterate->aspect_index + naspect >= datashape->n_aspect) {
-          if(gr_iterate->chan_index + nchan >= datashape->n_aspectchan) {
-          }
-          gr_iterate->chan_index = (gr_iterate->chan_index + nchan) % datashape->n_aspectchan;
-        }
-        gr_iterate->aspect_index = (gr_iterate->aspect_index + naspect) % datashape->n_aspect;
-      }
+  if(gr_iterate->time_index + ntime >= datashape->n_time) {
+    const int block_increment = (gr_iterate->time_index + ntime) / datashape->n_time;
+    int fileblock_offset = block_increment;
+    const int file_index = guppiraw_iterate_file_index_of_block_offset(gr_iterate, &fileblock_offset);
+    for(; gr_iterate->file_index != file_index; gr_iterate->file_index++) {
+      gr_iterate->file_info[gr_iterate->file_index].block_index = gr_iterate->file_info[gr_iterate->file_index].n_block;
     }
-    gr_iterate->time_index = (gr_iterate->time_index + ntime) % datashape->n_time;
+    gr_iterate->block_index += block_increment;
+    gr_iterate->file_info[gr_iterate->file_index].block_index += fileblock_offset;
 
-  }
-  else {
+    if (gr_iterate->block_index >= gr_iterate->n_block) {
+      exhausted = 1;
+      guppiraw_iterate_reset_time(gr_iterate);
 
-    if(gr_iterate->chan_index + nchan >= datashape->n_aspectchan) {
+      // iterate slower dimensions
       if(gr_iterate->aspect_index + naspect >= datashape->n_aspect) {
-        if(gr_iterate->time_index + ntime >= datashape->n_time) {
-          const int block_increment = (gr_iterate->time_index + ntime) / datashape->n_time;
-          int fileblock_offset = block_increment;
-          const int file_index = guppiraw_iterate_file_index_of_block_offset(gr_iterate, &fileblock_offset);
-          for(; gr_iterate->file_index != file_index; gr_iterate->file_index++) {
-            gr_iterate->file_info[gr_iterate->file_index].block_index = gr_iterate->file_info[gr_iterate->file_index].n_block;
-          }
-          gr_iterate->block_index += block_increment;
-          gr_iterate->file_info[gr_iterate->file_index].block_index += fileblock_offset;
+        if(gr_iterate->chan_index + nchan >= datashape->n_aspectchan) {
         }
-        gr_iterate->time_index = (gr_iterate->time_index + ntime) % datashape->n_time;
+        gr_iterate->chan_index = (gr_iterate->chan_index + nchan) % datashape->n_aspectchan;
       }
       gr_iterate->aspect_index = (gr_iterate->aspect_index + naspect) % datashape->n_aspect;
     }
-    gr_iterate->chan_index = (gr_iterate->chan_index + nchan) % datashape->n_aspectchan;
-
   }
+  gr_iterate->time_index = (gr_iterate->time_index + ntime) % datashape->n_time;
 
-  return bytes_read;
+  return exhausted;
+}
+
+uint8_t guppiraw_iterate_increment_in_channel(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect) {
+  const guppiraw_file_info_t* file_info = guppiraw_iterate_file_info_current(gr_iterate);  
+  const guppiraw_metadata_t* metadata = &file_info->metadata;  
+  const guppiraw_datashape_t* datashape = &metadata->datashape;
+  uint8_t exhausted = 0;
+
+  if(gr_iterate->chan_index + nchan >= datashape->n_aspectchan) {
+    if(gr_iterate->aspect_index + naspect >= datashape->n_aspect) {
+      if(gr_iterate->time_index + ntime >= datashape->n_time) {
+        exhausted = 1;
+
+        const int block_increment = (gr_iterate->time_index + ntime) / datashape->n_time;
+        int fileblock_offset = block_increment;
+        const int file_index = guppiraw_iterate_file_index_of_block_offset(gr_iterate, &fileblock_offset);
+        for(; gr_iterate->file_index != file_index; gr_iterate->file_index++) {
+          gr_iterate->file_info[gr_iterate->file_index].block_index = gr_iterate->file_info[gr_iterate->file_index].n_block;
+        }
+        gr_iterate->block_index += block_increment;
+        gr_iterate->file_info[gr_iterate->file_index].block_index += fileblock_offset;
+      }
+      gr_iterate->time_index = (gr_iterate->time_index + ntime) % datashape->n_time;
+    }
+    gr_iterate->aspect_index = (gr_iterate->aspect_index + naspect) % datashape->n_aspect;
+  }
+  gr_iterate->chan_index = (gr_iterate->chan_index + nchan) % datashape->n_aspectchan;
+
+  return exhausted;
+}
+
+void guppiraw_iterate_set_time_index(guppiraw_iterate_info_t* gr_iterate, const size_t block_index, const size_t time_index) {
+  gr_iterate->block_index = 0;
+  gr_iterate->file_index = 0;
+  gr_iterate->time_index = time_index;
+  
+  size_t file_n_block;
+  for (int file_i = 0; file_i < gr_iterate->n_file; file_i++) {
+    file_n_block = gr_iterate->file_info[file_i].n_block;
+    if (gr_iterate->block_index + file_n_block < block_index) {
+      // not in this file
+      gr_iterate->file_index += 1;
+      gr_iterate->block_index += file_n_block;
+      gr_iterate->file_info[gr_iterate->file_index].block_index = file_n_block;
+    }
+    else if (file_i == gr_iterate->file_index) {
+      // settle on this block
+      gr_iterate->file_info[gr_iterate->file_index].block_index = block_index - gr_iterate->block_index;
+      gr_iterate->block_index = block_index;
+    }
+    else {
+      // previously settled, this file is reset
+      gr_iterate->file_info[file_i].block_index = 0;
+    }
+  }
 }

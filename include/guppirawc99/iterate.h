@@ -40,7 +40,7 @@ typedef struct {
   size_t chan_index;
   size_t aspect_index;
 
-  char iterate_time_first_not_frequency_first;
+  char iterate_time_first_not_channel_first;
 } guppiraw_iterate_info_t;
 
 /*
@@ -75,7 +75,31 @@ int guppiraw_iterate_open_with_user_metadata(
 );
 #define guppiraw_iterate_open(gr_iterate, filepath) guppiraw_iterate_open_with_user_metadata(gr_iterate, filepath, 0, NULL)
 
-long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer);
+void guppiraw_iterate_set_time_index(guppiraw_iterate_info_t* gr_iterate, const size_t block_index, const size_t time_index);
+static inline void guppiraw_iterate_reset_time(guppiraw_iterate_info_t* gr_iterate) {
+  guppiraw_iterate_set_time_index(gr_iterate, 0, 0);
+}
+
+uint8_t guppiraw_iterate_increment_in_time(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect);
+uint8_t guppiraw_iterate_increment_in_channel(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect);
+
+long guppiraw_iterate_peek(const guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer);
+static inline uint8_t guppiraw_iterate_increment(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect) {
+
+  if(gr_iterate->iterate_time_first_not_channel_first == 0) {
+    return guppiraw_iterate_increment_in_channel(gr_iterate, ntime, nchan, naspect);
+  }
+  else {
+    return guppiraw_iterate_increment_in_time(gr_iterate, ntime, nchan, naspect);
+  }
+
+}
+
+static inline long guppiraw_iterate_read(guppiraw_iterate_info_t* gr_iterate, const size_t ntime, const size_t nchan, const size_t naspect, void* buffer) {
+  long bytes_read = guppiraw_iterate_peek(gr_iterate, ntime, nchan, naspect, buffer);
+  guppiraw_iterate_increment(gr_iterate, ntime, nchan, naspect);
+  return bytes_read;
+}
 void guppiraw_iterate_close(guppiraw_iterate_info_t* gr_iterate);
 
 #define guppiraw_iterate_file_info(gr_iterate, index) ((gr_iterate)->file_info + (index))
