@@ -502,9 +502,9 @@ uint8_t guppiraw_iterate_increment_in_channel(guppiraw_iterate_info_t* gr_iterat
   uint8_t exhausted = 0;
 
   if(gr_iterate->chan_index + nchan >= datashape->n_aspectchan) {
+    exhausted = 1;
     if(gr_iterate->aspect_index + naspect >= datashape->n_aspect) {
       if(gr_iterate->time_index + ntime >= datashape->n_time) {
-        exhausted = 1;
 
         const int block_increment = (gr_iterate->time_index + ntime) / datashape->n_time;
         int fileblock_offset = block_increment;
