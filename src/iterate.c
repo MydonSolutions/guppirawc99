@@ -430,8 +430,8 @@ long guppiraw_iterate_peek(const guppiraw_iterate_info_t* gr_iterate, const size
             stderr,
             "Error: remaining file_ntime (%d*%lu-%lu) is less than iteration time (%lu).\n",
             (file_info->n_block - file_info->block_index),
-            gr_iterate->time_index,
             datashape->n_time,
+            gr_iterate->time_index,
             ntime
           );
           return -1;
@@ -532,11 +532,11 @@ void guppiraw_iterate_set_time_index(guppiraw_iterate_info_t* gr_iterate, const 
   size_t file_n_block;
   for (int file_i = 0; file_i < gr_iterate->n_file; file_i++) {
     file_n_block = gr_iterate->file_info[file_i].n_block;
-    if (gr_iterate->block_index + file_n_block < block_index) {
+    if (gr_iterate->block_index + file_n_block <= block_index) {
       // not in this file
       gr_iterate->file_index += 1;
       gr_iterate->block_index += file_n_block;
-      gr_iterate->file_info[gr_iterate->file_index].block_index = file_n_block;
+      gr_iterate->file_info[file_i].block_index = file_n_block;
     }
     else if (file_i == gr_iterate->file_index) {
       // settle on this block
