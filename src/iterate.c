@@ -98,7 +98,8 @@ int guppiraw_iterate_open_with_user_metadata(
     // `filepath` is the `filestem.\d{4}.raw`
     gr_iterate->stempath_len = strlen(filepath)-9;
     gr_iterate->fileenum_offset = atoi(filepath + gr_iterate->stempath_len + 1);
-    gr_iterate->n_file = 1;
+    // initial file is the one provided, the file limit is assumed to be set in gr_iterate->n_file
+    //  <= 0 for no limit...
   }
 
   gr_iterate->stempath = malloc(gr_iterate->stempath_len+1);
