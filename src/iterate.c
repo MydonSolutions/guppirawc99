@@ -11,7 +11,7 @@ int _guppiraw_iterate_open(
   guppiraw_header_entry_parser user_callback
 ) {
   int rv = 0;
-  _file_info_ll_t *file_cur = NULL, *file_ll_head;
+  _file_info_ll_t *file_cur = NULL, *file_ll_head = NULL;
 
   char* filepath = malloc(gr_iterate->stempath_len+9+1);
   int fd;

@@ -18,6 +18,7 @@ int main(){
   clock_t start, stop;
 
   int flag = -1;
+  (void)flag;
 
   start = clock();
   for(uint64_t i = 0; i < reiterations; i++) {
