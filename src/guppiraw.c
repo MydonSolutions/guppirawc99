@@ -199,7 +199,7 @@ ssize_t guppiraw_write_block_batched(
   for(aspect_batch_i = 0; aspect_batch_i < n_aspect_batch; aspect_batch_i++) {
     for(batch_aspect_i = 0; batch_aspect_i < n_batched_aspect; batch_aspect_i++) {
       for(chan_batch_i = 0; chan_batch_i < n_chan_batch; chan_batch_i++) {
-        writev_params.iovecs[writev_params.iovec_count].iov_base = data + 
+        writev_params.iovecs[writev_params.iovec_count].iov_base = (void*)data + 
           aspect_batch_i*aspect_batch_block_size
           + chan_batch_i*batch_block_size
           + batch_aspect_i*batch_aspect_stride;
@@ -226,7 +226,7 @@ ssize_t guppiraw_write_block_batched(
       writev_params.iovecs[writev_params.iovec_count].iov_len += directio_pad_length;
     }
     else {
-        writev_params.iovecs[writev_params.iovec_count].iov_base = data;
+        writev_params.iovecs[writev_params.iovec_count].iov_base = (void*)data;
         writev_params.iovecs[writev_params.iovec_count].iov_len = directio_pad_length;
         writev_params.iovec_count++;
     }
@@ -265,7 +265,7 @@ ssize_t guppiraw_write_block_arbitrary(
       for(time_i = 0; time_i < datashape->n_time; time_i++){
         for(polarization_i = 0; polarization_i < datashape->n_pol; polarization_i++){
 
-          writev_params.iovecs[writev_params.iovec_count].iov_base = data
+          writev_params.iovecs[writev_params.iovec_count].iov_base = (void*)data
             + aspect_i * bytestride_aspect
             + time_i * bytestride_time
             + polarization_i * bytestride_polarization
@@ -295,7 +295,7 @@ ssize_t guppiraw_write_block_arbitrary(
       writev_params.iovecs[writev_params.iovec_count].iov_len += directio_pad_length;
     }
     else {
-        writev_params.iovecs[writev_params.iovec_count].iov_base = data;
+        writev_params.iovecs[writev_params.iovec_count].iov_base = (void*)data;
         writev_params.iovecs[writev_params.iovec_count].iov_len = directio_pad_length;
         writev_params.iovec_count++;
     }
