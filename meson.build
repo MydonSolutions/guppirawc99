@@ -3,11 +3,14 @@ project('guppirawc99', 'c',
   default_options: [
     'c_std=c99',
     'buildtype=release',
-    'b_ndebug=if-release'
+    'b_ndebug=if-release',
   ]
 )
 
 add_project_arguments('-D_POSIX_C_SOURCE=199309L', language : 'c')
+if get_option('buildtype') == 'release'
+  add_project_arguments('-Wno-unused-result', language : 'c')
+endif
 
 cc = meson.get_compiler('c')
 m_dep = cc.find_library('m', required : true)
