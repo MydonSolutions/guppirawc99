@@ -7,8 +7,9 @@ static const uint64_t KEY_UINT64_NBITS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','B',
 static const uint64_t KEY_UINT64_DIRECTIO  = GUPPI_RAW_KEY_UINT64_ID_LE('D','I','R','E','C','T','I','O');
 static const uint64_t KEY_UINT64_NANTS     = GUPPI_RAW_KEY_UINT64_ID_LE('N','A','N','T','S',' ',' ',' ');
 
-static const uint64_t KEY_UINT64_END  = GUPPI_RAW_KEY_UINT64_ID_LE('E','N','D',' ',' ',' ',' ',' ');
-static const uint64_t _UINT64_BLANK   = GUPPI_RAW_KEY_UINT64_ID_LE(' ',' ',' ',' ',' ',' ',' ',' ');
+static const uint64_t KEY_UINT64_OPENER = GUPPI_RAW_KEY_UINT64_ID_LE('\0','\0','\0','\0','\0','\0','\0','\0');
+static const uint64_t KEY_UINT64_END    = GUPPI_RAW_KEY_UINT64_ID_LE('E','N','D',' ',' ',' ',' ',' ');
+static const uint64_t _UINT64_BLANK     = GUPPI_RAW_KEY_UINT64_ID_LE(' ',' ',' ',' ',' ',' ',' ',' ');
 
 void guppiraw_header_parse_entry(const char* entry, guppiraw_metadata_t* metadata) {
   if(((uint64_t*)entry)[0] == KEY_UINT64_BLOCSIZE)
@@ -72,6 +73,10 @@ void guppiraw_header_datashape_process(guppiraw_datashape_t* datashape) {
     datashape->n_time = datashape->bytestride_channel / datashape->bytestride_time;
 }
 
+char guppiraw_header_entry_is_OPENER(const uint64_t* entry_uint64) {
+  return entry_uint64[0] == KEY_UINT64_OPENER;
+}
+
 char guppiraw_header_entry_is_END(const uint64_t* entry_uint64) {
   return entry_uint64[0] == KEY_UINT64_END &&
     entry_uint64[1] == _UINT64_BLANK &&
@@ -92,6 +97,8 @@ void guppiraw_header_parse(guppiraw_header_t* header, char* header_string, int64
   header->n_entries = 0;
   header->head = malloc(sizeof(guppiraw_header_llnode_t));
 	guppiraw_header_llnode_t* head = header->head;
+  uint64_t opener = 0;
+  guppiraw_header_parse_entry((char*)&opener, &header->metadata); // OPENER
 	
   while(
     (header_string_length >= 80 || header_string_length < 0)

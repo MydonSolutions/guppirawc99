@@ -69,6 +69,8 @@ int _guppiraw_parse_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo, int
  *  2 : Header is inappropriate (missing `BLOCSIZE`)
  */
 int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
+  uint64_t opener = 0;
+  guppiraw_header_parse_entry((char*)&opener, &gr_blockinfo->metadata); // OPENER
   int rv = _guppiraw_parse_blockheader(fd, gr_blockinfo, 1);
   if(rv == 0) {
     if(gr_blockinfo->metadata.datashape.block_size == 0) {
@@ -80,6 +82,8 @@ int guppiraw_read_blockheader(int fd, guppiraw_block_info_t* gr_blockinfo) {
 }
 
 /*
+ * Just glosses over the entries, not parsing them.
+ * 
  * Returns:
  *  -1: `read(...)` returned 0 before `GUPPI_RAW_HEADER_END_STR`
  *  0 : Successfully parsed the header

@@ -17,6 +17,7 @@
 void guppiraw_header_datashape_process(guppiraw_datashape_t* datashape);
 
 void guppiraw_header_parse_entry(const char* entry, guppiraw_metadata_t* metadata);
+char guppiraw_header_entry_is_OPENER(const uint64_t* entry_uint64);
 char guppiraw_header_entry_is_END(const uint64_t* entry_uint64);
 // Negative `header_length` indicates no hard limit on `header_string` length
 void guppiraw_header_string_parse_metadata(guppiraw_metadata_t* metadata, char* header_string, int64_t header_string_length);

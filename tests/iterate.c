@@ -10,6 +10,7 @@
 typedef struct {
   double chan_bw;
   double tbin;
+  int test_opener;
 } guppiraw_block_meta_t;
 
 const uint64_t KEY_UINT64_CHAN_BW  = GUPPI_RAW_KEY_UINT64_ID_LE('C','H','A','N','_','B','W',' ');
@@ -18,6 +19,8 @@ void guppiraw_parse_block_meta(const char* entry, void* block_meta) {
   if(((uint64_t*)entry)[0] == KEY_UINT64_CHAN_BW) {
     hgetr8(entry, "CHAN_BW", &((guppiraw_block_meta_t*)block_meta)->chan_bw);
     ((guppiraw_block_meta_t*)block_meta)->tbin = 1.0/((guppiraw_block_meta_t*)block_meta)->chan_bw;
+  } else if (guppiraw_header_entry_is_OPENER((uint64_t*)entry)) {
+    ((guppiraw_block_meta_t*)block_meta)->test_opener = 314159265;
   }
 }
 
@@ -184,6 +187,10 @@ int main(int argc, char const *argv[])
 
   assert(
     abs(((guppiraw_block_meta_t*)guppiraw_iterate_metadata(&gr_iterate)->user_data)->chan_bw - 3.1415926535) < 1e-3
+  );
+
+  assert(
+    ((guppiraw_block_meta_t*)guppiraw_iterate_metadata(&gr_iterate)->user_data)->test_opener == 314159265
   );
 
   const int factors[] = {1, 2, 3, 4, 5, 7, 8, 16};
